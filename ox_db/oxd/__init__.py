@@ -3,6 +3,7 @@ import bson
 import os
 import zipfile
 
+
 class OxDoc:
     def __init__(self, doc):
         """
@@ -10,7 +11,7 @@ class OxDoc:
 
         Args:
             db (str): The name of the oxd doc or its path eg : (note) (/home/user/note.oxd)
-           
+
         """
         self.doc, self.doc_path = self._doc_validator(doc)
         if not os.path.exists(self.doc_path):
@@ -21,7 +22,7 @@ class OxDoc:
         self.free_list_name = f"{self.doc}.free_list.oxdfl"
         self.data_doc_name = f"{self.doc}.doc.oxdd"
         self.load_index()
-        self.set("oxd-init",f"{self.doc}")
+        self.set("oxd-init", f"{self.doc}")
 
     def _get_file_path(self, file_name):
         return os.path.join(self.doc_path, file_name)
@@ -70,7 +71,7 @@ class OxDoc:
         data = {key: value}
         bson_data = bson.encode(data)
         bson_data_len = len(bson_data)  # Length of the BSON valuee
-        set_status  = False
+        set_status = False
         # Check if key exists for update
         if key in self.index:
             file_position, existing_bson_data_len = self.index[key]
@@ -101,7 +102,7 @@ class OxDoc:
                 set_status = True
 
         self.save_index()
-        return set_status 
+        return set_status
 
     def add(self, data_dict: dict):
         for key, value in data_dict.items():
@@ -178,23 +179,25 @@ class OxDoc:
                 except Exception:
                     break  # End of file or error in reading, stop the loop
         return data_dict
-    
-    
 
-    def zip(self,output_path:str=None):
+    def zip(self, output_path: str = None):
         """
         Compresses the given folder into a ZIP file.
 
         Parameters:
         output_path (str) or None : The path to the output ZIP file.
         """
-        if output_path != None :
-            if not os.path.exists(output_path ):
+        if output_path != None:
+            if not os.path.exists(output_path):
                 raise ValueError(f"oxd : given path {output_path} does not exist")
         folder_path = self.doc_path
-        output_path =  os.path.join(output_path , self.doc+".oxd") if output_path else self.doc_path
+        output_path = (
+            os.path.join(output_path, self.doc + ".oxd")
+            if output_path
+            else self.doc_path
+        )
         output_path += ".zip"
-        with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(folder_path):
                 for file in files:
                     file_path = os.path.join(root, file)
@@ -204,7 +207,7 @@ class OxDoc:
         return output_path
 
     @classmethod
-    def unzip(cls,zip_path:str, output_path:str=None):
+    def unzip(cls, zip_path: str, output_path: str = None):
         """
         Extracts the given ZIP file to the specified folder.
 
@@ -212,35 +215,43 @@ class OxDoc:
         zip_path (str): The path to the ZIP file to be extracted.
         extract_to (str): The path to the folder where files should be extracted.
         """
-        if not os.path.exists(zip_path ):
+        if not os.path.exists(zip_path):
             raise ValueError(f"oxd : given oxd.zip path {zip_path} does not exist")
-        if output_path != None :
-            if not os.path.exists(output_path ):
-                raise ValueError(f"oxd : given output path {output_path} does not exist")
-        
-        extract_to_path , _ = os.path.splitext(zip_path)
-        base_name = os.path.basename(extract_to_path)
-        extract_to = os.path.join(output_path , base_name) if output_path else extract_to_path
+        if output_path != None:
+            if not os.path.exists(output_path):
+                raise ValueError(
+                    f"oxd : given output path {output_path} does not exist"
+                )
 
-        with zipfile.ZipFile(zip_path, 'r') as zipf:
+        extract_to_path, _ = os.path.splitext(zip_path)
+        base_name = os.path.basename(extract_to_path)
+        extract_to = (
+            os.path.join(output_path, base_name) if output_path else extract_to_path
+        )
+
+        with zipfile.ZipFile(zip_path, "r") as zipf:
             zipf.extractall(extract_to)
 
         return extract_to
 
-    def to_json(self, output_path:str=None):
+    def to_json(self, output_path: str = None):
         """
         Converts a dictionary to a JSON file.
 
         Parameters:
         output_path (str): The path to the output JSON file.
         """
-        if output_path != None :
-            if not os.path.exists(output_path ):
+        if output_path != None:
+            if not os.path.exists(output_path):
                 raise ValueError(f"oxd : given path {output_path} does not exist")
-        output_path =  os.path.join(output_path , self.doc+".json") if output_path else os.path.join(".",self.doc+".json")
+        output_path = (
+            os.path.join(output_path, self.doc + ".json")
+            if output_path
+            else os.path.join(".", self.doc + ".json")
+        )
 
         data = self.compact()
-        with open(output_path, 'w') as json_file:
+        with open(output_path, "w") as json_file:
             json.dump(data, json_file, indent=4)
 
     def _find_space_or_append(self, size):
@@ -257,29 +268,26 @@ class OxDoc:
         with open(self._get_file_path(self.data_doc_name), "ab") as file:
             return file.tell()
 
-    
-    def _doc_validator(self, doc:str):
+    def _doc_validator(self, doc: str):
         if not isinstance(doc, str):
             raise ValueError("oxd : The doc must be a string.")
         doc_path = doc
-      
-        path_to_doc , doc_name_full= os.path.split(doc)
-        if path_to_doc =="":
-            path_to_doc="."
+
+        path_to_doc, doc_name_full = os.path.split(doc)
+        if path_to_doc == "":
+            path_to_doc = "."
         elif not os.path.exists(path_to_doc):
             raise ValueError(f"oxd : given path {path_to_doc} does not exist")
-          
-        doc_name , ext = os.path.splitext(doc_name_full)
-        
 
-        if ext not in ['', '.oxd']:
+        doc_name, ext = os.path.splitext(doc_name_full)
+
+        if ext not in ["", ".oxd"]:
             raise ValueError("oxd : Invalid file extension. Only '.oxd' is allowed.")
-        
+
         # Determine doc and doc_path based on the input
-        if ext == '.oxd':
+        if ext == ".oxd":
             doc_path = doc
         else:
-            doc_path = doc+'.oxd'
+            doc_path = doc + ".oxd"
 
-    
         return doc_name, doc_path

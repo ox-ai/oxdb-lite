@@ -39,7 +39,9 @@ class Log:
             str: The path to the database.
         """
         self.db = db
-        self.db_path = db_path if db_path else os.path.join(os.path.expanduser("~"), db + ".ox-db")
+        self.db_path = (
+            db_path if db_path else os.path.join(os.path.expanduser("~"), db + ".ox-db")
+        )
         os.makedirs(self.db_path, exist_ok=True)
         return self.db_path
 
@@ -66,21 +68,22 @@ class Log:
             self.doc = self.doc or "log-" + datetime.now().strftime("[%d_%m_%Y]")
         elif self.doc != doc:
             self.doc = doc
-        else : return self.doc
+        else:
+            return self.doc
 
         self.doc_path = os.path.join(self.db_path, self.doc)
         os.makedirs(self.doc_path, exist_ok=True)
-   
+
         self.doc_data = self._create_oxd("data.oxd")
         self.doc_vec = self._create_oxd("vec.oxd")
- 
+
         doc_index_data = self.load_data(self.doc + ".index")
         self.doc_entry = doc_index_data["ox-db_init"]["doc_entry"]
 
         return self.doc
-    
-    def _create_oxd(self,oxd_doc_name):
-        oxd_doc_path  = os.path.join(self.doc_path,oxd_doc_name)
+
+    def _create_oxd(self, oxd_doc_name):
+        oxd_doc_path = os.path.join(self.doc_path, oxd_doc_name)
         return OxDoc(oxd_doc_path)
 
     def get_doc(self) -> str:
@@ -98,7 +101,7 @@ class Log:
         embeddings: bool = True,
         data_story: Optional[str] = None,
         key: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ) -> str:
         """
         Pushes data to the log file. Can be called with either data or both key and data.
@@ -120,32 +123,34 @@ class Log:
             raise ValueError("ox-db : No data provided for logging")
 
         index_data = {
-            "uid":uid,
-            "key":key or "key",
-            "doc":doc,
-            "time":datetime.now().strftime("%I:%M:%S_%p"),
-            "date":datetime.now().strftime("%d_%m_%Y"),
-            "vec_model":kwargs.get("vec_model", self.vec.md_name),
-            "description":data_story,
-            "data_type":kwargs.get("data_type", "data.str")
+            "uid": uid,
+            "key": key or "key",
+            "doc": doc,
+            "time": datetime.now().strftime("%I:%M:%S_%p"),
+            "date": datetime.now().strftime("%d_%m_%Y"),
+            "vec_model": kwargs.get("vec_model", self.vec.md_name),
+            "description": data_story,
+            "data_type": kwargs.get("data_type", "data.str"),
         }
 
         self._push(uid, index_data, doc + ".index")
-        self.doc_data.set(uid,data)
+        self.doc_data.set(uid, data)
         if embeddings:
-            encoded_embeddings = encoded_embeddings if embeddings!= True else self.vec.encode(data)
-            self.doc_vec.set(uid,encoded_embeddings)
+            encoded_embeddings = (
+                encoded_embeddings if embeddings != True else self.vec.encode(data)
+            )
+            self.doc_vec.set(uid, encoded_embeddings)
 
         return uid
-    
-    def retrive_all(self,docfile):
+
+    def retrive_all(self, docfile):
         """
         Retrieves all the content key value pairs as dict
 
         Args:
         docfile (Optional[str], optional): The specific file within the document. Defaults to None.
-            eg : ["data.oxd","vec.oxd",".index]
-        
+            eg : ["data.oxd","vec.oxd",".index"]
+
         Returns:
             dict: dict of the docfile
         """
@@ -155,7 +160,7 @@ class Log:
             del content["ox-db_init"]
         elif docfile == "vec.oxd":
             content = self.doc_vec.load_data()
-        else :
+        else:
             content = self.doc_data.load_data()
         return content
 
@@ -176,7 +181,7 @@ class Log:
             time (Optional[str], optional): The time of the log entry. Defaults to None.
             date (Optional[str], optional): The date of the log entry. Defaults to None.
             docfile (Optional[str], optional): The specific file within the document. Defaults to None.
-            eg : ["data.oxd","vec.oxd",".index]
+            eg : ["data.oxd","vec.oxd",".index"]
         Returns:
             List[dict]: The log entries matching the criteria.
         """
@@ -197,20 +202,46 @@ class Log:
 
         if uid is not None:
             uids = Log._convert_input(uid)[0]
-            content = self.retrive_all(docfile)
-            for u in uids:
-                if u in content:
-                    data = content[u]
+
+            if docfile == ".index":
+                content = self.load_data(self.doc + ".index")
+                for u in uids:
+                    if u in content:
+                        data = content[u]
+                        log_entries.append(
+                            {
+                                "uid": u,
+                                "data": data,
+                            }
+                        )
+                return log_entries
+            elif docfile == "vec.oxd":
+                for u in uids:
+                    data = self.doc_vec.get(u)
+                    if not data:
+                        continue
                     log_entries.append(
                         {
                             "uid": u,
                             "data": data,
                         }
                     )
-            return log_entries
+                return log_entries
+            else:
+                for u in uids:
+                    data = self.doc_data.get(u)
+                    if not data:
+                        continue
+                    log_entries.append(
+                        {
+                            "uid": u,
+                            "data": data,
+                        }
+                    )
+                return log_entries
 
         if any([key, time, date]):
-            uids = self.search_uid( key, time, date)
+            uids = self.search_uid(key, time, date)
             data = self.pull(uid=uids, docfile=docfile)
             log_entries.extend(data)
             return log_entries
@@ -261,7 +292,7 @@ class Log:
     def embed_all(self, doc: str):
         # Placeholder for future implementation
         pass
-    
+
     @classmethod
     def gen_uid(cls) -> str:
         """
@@ -285,10 +316,10 @@ class Log:
         """
         log_file_path = self._get_logfile_path(log_file)
         try:
-            with open(log_file_path, "rb+" ) as file:
+            with open(log_file_path, "rb+") as file:
                 file_content = file.read()
                 return bson.decode_all(file_content)[0] if file_content else {}
-                
+
         except FileNotFoundError:
             file_content = {"ox-db_init": {"doc_entry": 0}}
             self.save_data(log_file, file_content)
@@ -310,7 +341,7 @@ class Log:
             file.write(bson.encode(content))
 
         try:
-            mode = "rb+" 
+            mode = "rb+"
             with open(log_file_path, mode) as file:
                 write_file(file, file_content)
         except FileNotFoundError:
@@ -319,10 +350,10 @@ class Log:
                 write_file(file, file_content)
 
     def search_uid(
-        self, 
-        key: Optional[str] = None, 
-        time: Optional[str] = None, 
-        date: Optional[str] = None
+        self,
+        key: Optional[str] = None,
+        time: Optional[str] = None,
+        date: Optional[str] = None,
     ) -> List[str]:
         """
         Searches for UIDs based on key, time, or date.
@@ -345,9 +376,9 @@ class Log:
         del content["ox-db_init"]
         for uid, data in content.items():
             log_it = (
-                self._match_time(data["time"], time_parts) or
-                self._match_date(data["date"], date_parts) or
-                key == data["key"]
+                self._match_time(data["time"], time_parts)
+                or self._match_date(data["date"], date_parts)
+                or key == data["key"]
             )
 
             if log_it:
@@ -445,7 +476,10 @@ class Log:
             bool: Whether the log time matches the query time.
         """
         log_time_parts = log_time.split("_")[0].split(":") + [log_time.split("_")[1]]
-        return log_time_parts[: len(query_time) - 1] == query_time[:-1] and log_time_parts[-1] == query_time[-1]
+        return (
+            log_time_parts[: len(query_time) - 1] == query_time[:-1]
+            and log_time_parts[-1] == query_time[-1]
+        )
 
     @staticmethod
     def _match_date(log_date: str, query_date: List[Optional[str]]) -> bool:
