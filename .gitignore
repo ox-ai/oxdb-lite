@@ -176,3 +176,5 @@ dist/
 ox.db/
 build/
 *.egg-info/
+
+*.oxd.zip

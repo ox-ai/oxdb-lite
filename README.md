@@ -71,7 +71,7 @@ log.search("data",2)
 to start vector db (ox-db) api run below commend refer [docs.api.log](./docs/api.log.md)
 
 ```
-uvicorn ox_engine.api.log:app
+uvicorn ox_db.api.log:app
 ```
 
 ## directory tree :

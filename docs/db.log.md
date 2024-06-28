@@ -2,7 +2,7 @@
 
 ```py
 
-from ox_engine.db.log import Log
+from ox_db.db.log import Log
 
 log=Log("test")
 

@@ -8,7 +8,7 @@
 ### run directly from lib
 
 ```
-uvicorn ox_engine.api.log:app  
+uvicorn ox_db.api.log:app  
 ```
 
 ### to run via file:
@@ -16,7 +16,7 @@ uvicorn ox_engine.api.log:app
 create file test.py
 
 ```py
-from ox_engine.api import log
+from ox_db.api import log
 
 app = log.run()
 ```
