@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import TypeAlias, Union, List, Optional, Any
 from pydantic import BaseModel
 from ox_db.ai.vector import Model
-from ox_db.oxd import OxDoc
+from ox_doc.ld import OxDoc
 
 
 # Type Alias for key, uid, or date queries
