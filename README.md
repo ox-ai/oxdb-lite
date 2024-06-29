@@ -1,6 +1,8 @@
 # ox-db
 
-ox-db is an open-source vector database specifically designed for storing and retrieving vector embeddings and also build rag system for ai assistent knowledge database storage
+## about :
+
+**ox-db** is an open-source vector database specifically designed for storing and retrieving vector embeddings and also build rag system for ai assistent knowledge database storage
 
 ## Installation:
 
@@ -9,6 +11,8 @@ always build from source for latest and bug free version
 > note : install [ox-doc](https://github.com/ox-ai/ox-doc.git) before installing ox-db
 
 ### pre requisite
+
++ core ox-db data management and documents handelling storage retrieval serialization are done using **[ox-doc](https://github.com/ox-ai/ox-doc.git)**
 
 ```
 pip install git+https://github.com/ox-ai/ox-doc.git
@@ -37,7 +41,7 @@ pip install ox-db
 ### code snippet :
 
 ```py
-from ox_engine.db.log import Log
+from ox_db.db.log import Log
 
 log=Log("test")
 log.set_doc("test-doc")

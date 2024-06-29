@@ -10,12 +10,12 @@ will be completed after major release
 ```
 .
 └── note
-    ├── log-[29_06_2024].index.bson
+    ├── note.index.bson
     ├── vec.oxd
     │   ├── vec.doc.oxdd
     │   ├── vec.free_list.oxdfl
     │   └── vec.index.oxdi
-    └── note
+    └── data.oxd
         ├── data.doc.oxdd
         ├── data.free_list.oxdfl
         └── data.index.oxdi
