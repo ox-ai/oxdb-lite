@@ -12,7 +12,7 @@ always build from source for latest and bug free version
 
 ### pre requisite
 
-+ core ox-db data management and documents handelling storage retrieval serialization are done using **[ox-doc](https://github.com/ox-ai/ox-doc.git)**
+- core ox-db data management and documents handelling storage retrieval serialization are done using **[ox-doc](https://github.com/ox-ai/ox-doc.git)**
 
 ```
 pip install git+https://github.com/ox-ai/ox-doc.git
@@ -29,10 +29,6 @@ pip install git+https://github.com/ox-ai/ox-db.git
 ```
 pip install ox-db
 ```
-
-## docs :
-
-- [docs.md](./docs/docs.md) will be released after major release
 
 ## ox-db
 
@@ -61,6 +57,23 @@ to start vector db (ox-db) api run below commend refer [docs.api.log](./docs/api
 ```
 uvicorn ox_db.api.log:app
 ```
+
+## docs :
+
+- [docs.md](./docs/docs.md) will be released after major release
+
+## lib implementation :
+
+| Title                     | Status | Description                                             |
+| ------------------------- | ------ | ------------------------------------------------------- |
+| log                       | ip     | log data base system                                    |
+| vector integration        | ip     | log vecctor data base                                   |
+| query engine              | ip     | vector search                                           |
+| demon search engine       |        | optimized search                                        |
+| tree load                 |        | vector storage system                                   |
+| key lang translator       |        | natural lang to key lang                                |
+| plugin integration        |        | system to write add-on to intract with vector data base |
+| data structurer as plugin |        | structure raw data to custom format                     |
 
 ## directory tree :
 

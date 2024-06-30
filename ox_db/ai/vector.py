@@ -1,3 +1,4 @@
+from typing import List
 from sentence_transformers import SentenceTransformer
 import numpy as np
 
@@ -16,13 +17,15 @@ class Model:
         return embeddings
     
 
-    def search(self,query:str,doc_embed:list=None,doc:list=None,topn=5):
+    def search(self,query:str,doc_embed:list=[],doc_data:list=[],topn=5,by:str="dp")->List[int]:
         
         query_embed = np.array(self.encode(query))
-        if doc :
-            doc_embed = self.encode(doc)
-        else:
+        if len(doc_data)>0 :
+            doc_embed = self.encode(doc_data)
+        elif len(doc_embed)>0:
             doc_embed = np.array(doc_embed)
+        else:
+            return []
 
         # need to implement all 3 sim metrics
         # Dot Product (default)
