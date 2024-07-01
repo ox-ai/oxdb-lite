@@ -39,14 +39,14 @@ pip install ox-db
 ```py
 from ox_db.db.log import Oxdb
 
-db=Oxdb("test")
-doc = db.get_doc("test-doc")
+db=Oxdb("kn-base")
+log = db.get_doc("note-doc")
 
-doc.push("data-2")
-doc.push("need to complete work",key="note")
+log.push("data-1")
+log.push("need to complete work",key="note")
 
-doc.pull(time="05")
-doc.search("data",2)
+log.pull(time="05")
+log.search("data",2)
 
 ```
 
@@ -86,7 +86,9 @@ uvicorn ox_db.api.log:app
 ├── api
 │   ├── __init__.py
 │   └── log.py
-└── db
-    ├── __init__.py
-    └── log.py
+├── db
+│   ├── __init__.py
+│   └── log.py
+├── settings.py
+└── utils
 ```
