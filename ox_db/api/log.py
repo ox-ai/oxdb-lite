@@ -1,46 +1,48 @@
-from ox_db.db.log import Log
+from ox_db.db.log import Oxdb
 
 from fastapi import FastAPI
 
 
 app = FastAPI()
-log = Log("hosted")
+db = Oxdb("hosted")
+doc = db.get_doc()
 
 @app.get("/")
 def get():
-    return log.db
+    return db.db
 
 @app.get("/get-db")
 def get_db():
-    return log.db
+    return db.db
 
 @app.get("/get-doc")
 def get_doc():
-    return log.get_doc()
+    doc = db.get_doc()
+    return 
 
-@app.get("/get-doc_n")
-def get_doc_entry():
-    return log.doc_entry
+@app.get("/get-doc_reg")
+def get_doc_reg():
+    return doc.doc_reg
 
 @app.get("/pull/{}")
 def pull():
-    return log.pull()
+    return doc.pull()
 
 @app.get("/search/{query}/{topn}")
 def search(query:str,topn:int):
-    return log.search(query,topn)
+    return doc.search(query,topn)
 
 @app.post("/set-db/{db_name}")
 def set_db(db_name:str):
-    return log.set_db(db_name)
+    return doc.set_db(db_name)
 
 @app.post("/set-doc/{doc_name}")
 def set_doc(doc_name:str):
-    return log.set_doc(doc_name)
+    return doc.set_doc(doc_name)
 
 @app.post("/push/{data}")
 def push(data:str):
-    return log.push(data)
+    return doc.push(data)
 
 def run():
     return app

@@ -18,7 +18,7 @@ SLBUnion: TypeAlias = Union[str, List[str], bool]
 SLUnion: TypeAlias = Union[str, List[str]]
 
 
-class Log:
+class Oxdb:
     def __init__(self, db: str = "", db_path: Optional[str] = None):
         """
         Initialize instances of the Log class
@@ -28,9 +28,7 @@ class Log:
             db_path (Optional[str], optional): The path to the database directory. Defaults to None.
         """
         self.set_db(db, db_path)
-        self.doc: Optional[str] = None
         self.vec = Model()
-        self.set_doc()
 
     def set_db(self, db: str, db_path: Optional[str] = None) -> str:
         """
@@ -45,7 +43,9 @@ class Log:
         """
         self.db = db
         self.db_path = (
-            db_path if db_path else os.path.join(os.path.expanduser("~"), db + ".ox-db")
+            db_path
+            if db_path
+            else os.path.join(os.path.expanduser("~"), "ox-db", db + ".oxdb")
         )
         os.makedirs(self.db_path, exist_ok=True)
         return self.db_path
@@ -59,25 +59,40 @@ class Log:
         """
         return self.db_path
 
-    def set_doc(self, doc: Optional[str] = None) -> str:
+    def get_doc(self, doc: Optional[str] = None):
         """
-        Sets the current document.
+        get the document instances
 
         Args:
             doc (Optional[str], optional): The document name. Defaults to None.
 
         Returns:
-            str: The document name.
+             The doc instances.
         """
-        if doc is None:
-            self.doc = self.doc or "log-" + datetime.now().strftime("[%d_%m_%Y]")
-        elif self.doc != doc:
-            self.doc = doc
-        else:
-            return self.doc
+        self.doc = Doc(doc)
+        self.doc.connect_db(self.db_path, self.vec)
+        return self.doc
 
-        self.doc_path = os.path.join(self.db_path, self.doc)
+    def get_docs(self) -> list:
+        """
+        Returns the current document.
+
+        Returns:
+            list: of all docs
+        """
+        pass
+
+
+class Doc:
+    def __init__(self, doc: Optional[str] = None):
+        self.doc_name = doc or "log-" + datetime.now().strftime("[%d_%m_%Y]")
+
+    def connect_db(self, db_path, vec):
+        self.db_path = db_path
+        self.vec = vec
+        self.doc_path = os.path.join(self.db_path, self.doc_name)
         os.makedirs(self.doc_path, exist_ok=True)
+        self.doc_index_path = os.path.join(self.doc_path, self.doc_name + ".index")
 
         self.load_index()
         self.data_oxd = self._create_oxd("data.oxd")
@@ -85,20 +100,18 @@ class Log:
         self.doc_reg["vec_model"] = self.vec.md_name
         self.save_index()
 
-        return self.doc
-
     def _create_oxd(self, oxd_doc_name):
         oxd_doc_path = os.path.join(self.doc_path, oxd_doc_name)
         return OxDoc(oxd_doc_path)
 
-    def get_doc(self) -> str:
+    def get_doc_name(self) -> str:
         """
         Returns the current document.
 
         Returns:
             str: The document name.
         """
-        return self.doc or self.set_doc()
+        return self.doc_name
 
     def push(
         self,
@@ -123,7 +136,7 @@ class Log:
         Returns:
             str: The unique ID of the log entry.
         """
-        doc = self.get_doc()
+        doc = self.get_doc_name()
         uid = self.gen_uid()
 
         if data == "" or data is None:
@@ -196,10 +209,10 @@ class Log:
             return log_entries
 
         if uid is not None:
-            uids = Log._convert_input(uid)[0]
+            uids = Doc._convert_input(uid)[0]
 
             if docfile == ".index":
-                
+
                 content = self.doc_index
                 for u in uids:
                     if u in content:
@@ -309,10 +322,9 @@ class Log:
         Returns:
             dict: The loaded data.
         """
-        log_file = self.doc + ".index"
-        log_file_path = self._get_logfile_path(log_file)
+
         try:
-            with open(log_file_path, "rb+") as file:
+            with open(self.doc_index_path, "rb+") as file:
                 file_content = file.read()
                 content = bson.decode_all(file_content)[0] if file_content else {}
                 self.doc_reg = content["doc_reg"]
@@ -330,8 +342,8 @@ class Log:
         """
         Saves data to a BSON or JSON file.
         """
-        log_file = self.doc + ".index"
-        log_file_path = self._get_logfile_path(log_file)
+
+        log_file_path = self.doc_index_path
 
         content = {"doc_reg": self.doc_reg, "index": self.doc_index}
 
@@ -366,8 +378,7 @@ class Log:
         Returns:
             List[str]: The matching UIDs.
         """
-    
-        
+
         content = self.doc_index
         uids = []
 
@@ -386,19 +397,6 @@ class Log:
 
         return uids
 
-    def _get_logfile_path(self, log_file: str) -> str:
-        """
-        Constructs the full path to a log file.
-
-        Args:
-            log_file (str): The log file name.
-
-        Returns:
-            str: The full path to the log file.
-        """
-        self.doc_path = self.doc_path or os.path.join(self.db_path, self.doc)
-        return os.path.join(self.doc_path, f"{log_file}.bson")
-
     def push_index(self, uid: str, index_unit: Any, log_file: str):
         """
         Pushes data to a specified log file.
@@ -409,11 +407,10 @@ class Log:
             log_file (str): The log file name.
         """
         if index_unit == "" or index_unit is None:
-            raise ValueError("ox-db: No data provided for logging")        
+            raise ValueError("ox-db: No data provided for logging")
         self.doc_index[uid] = index_unit
         self.doc_reg["entry"] += 1
         self.save_index()
-
 
     def _retrive_doc_all(self, docfile) -> dict:
         """

@@ -37,16 +37,16 @@ pip install ox-db
 ### code snippet :
 
 ```py
-from ox_db.db.log import Log
+from ox_db.db.log import Oxdb
 
-log=Log("test")
-log.set_doc("test-doc")
+db=Oxdb("test")
+doc = db.get_doc("test-doc")
 
-log.push("data-2")
-log.push("need to complete work",key="note")
+doc.push("data-2")
+doc.push("need to complete work",key="note")
 
-log.pull(time="05:51")
-log.search("data",2)
+doc.pull(time="05")
+doc.search("data",2)
 
 ```
 

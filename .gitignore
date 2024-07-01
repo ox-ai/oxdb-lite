@@ -178,3 +178,5 @@ build/
 *.egg-info/
 
 *.oxd.zip
+
+ignore.*
