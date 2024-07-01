@@ -79,13 +79,11 @@ class Log:
         self.doc_path = os.path.join(self.db_path, self.doc)
         os.makedirs(self.doc_path, exist_ok=True)
 
+        self.load_index()
         self.data_oxd = self._create_oxd("data.oxd")
         self.vec_oxd = self._create_oxd("vec.oxd")
-
-        doc_index_data = self.load_index(self.doc + ".index")
-        self.doc_entry = doc_index_data["ox-db_init"]["doc_entry"]
-        doc_index_data["ox-db_init"]["vec_model"] = self.vec.md_name
-        self.save_index(self.doc, doc_index_data)
+        self.doc_reg["vec_model"] = self.vec.md_name
+        self.save_index()
 
         return self.doc
 
@@ -120,7 +118,6 @@ class Log:
             description (Optional[any], optional): Description related to the data. Defaults to None.
             metadata (Optional[dict], optional): metadata related to the data. Defaults to None.
             key (Optional[str], optional): The key for the log entry. Defaults to None.
-            doc (Optional[str], optional): The doc for the log entry. Defaults to None.
             data_type (Optional[str], optional): The data_type of log entry. Defaults to None.
 
         Returns:
@@ -175,6 +172,7 @@ class Log:
                 eg : ["data.oxd","vec.oxd",".index"]
             where={"metadata_key": "value"},
             where_data={"$contains":"search_string"} ,
+
         Returns:
             List[dict]: The log entries matching the criteria.
         """
@@ -201,8 +199,8 @@ class Log:
             uids = Log._convert_input(uid)[0]
 
             if docfile == ".index":
-                file_content = self.load_index(self.doc + ".index")
-                content = file_content["index"]
+                
+                content = self.doc_index
                 for u in uids:
                     if u in content:
                         unit = content[u]
@@ -304,36 +302,38 @@ class Log:
         uid = str(uuid.uuid4())
         return uid
 
-    def load_index(self, log_file: str) -> dict:
+    def load_index(self) -> dict:
         """
         Loads data from a BSON or JSON file.
-
-        Args:
-            log_file (str): The log file name.
 
         Returns:
             dict: The loaded data.
         """
+        log_file = self.doc + ".index"
         log_file_path = self._get_logfile_path(log_file)
         try:
             with open(log_file_path, "rb+") as file:
                 file_content = file.read()
-                return bson.decode_all(file_content)[0] if file_content else {}
+                content = bson.decode_all(file_content)[0] if file_content else {}
+                self.doc_reg = content["doc_reg"]
+                self.doc_index = content["index"]
+                return content
 
         except FileNotFoundError:
-            file_content = {"ox-db_init": {"doc_entry": 0}, "index": {}}
-            self.save_index(log_file, file_content)
-            return file_content
+            content = {"doc_reg": {"entry": 0}, "index": {}}
+            self.doc_reg = content["doc_reg"]
+            self.doc_index = content["index"]
+            self.save_index()
+            return content
 
-    def save_index(self, log_file: str, file_content: dict):
+    def save_index(self):
         """
         Saves data to a BSON or JSON file.
-
-        Args:
-            log_file (str): The log file name.
-            file_content (dict): The data to save.
         """
+        log_file = self.doc + ".index"
         log_file_path = self._get_logfile_path(log_file)
+
+        content = {"doc_reg": self.doc_reg, "index": self.doc_index}
 
         def write_file(file, content):
             file.seek(0)
@@ -343,11 +343,11 @@ class Log:
         try:
             mode = "rb+"
             with open(log_file_path, mode) as file:
-                write_file(file, file_content)
+                write_file(file, content)
         except FileNotFoundError:
             mode = "wb"
             with open(log_file_path, mode) as file:
-                write_file(file, file_content)
+                write_file(file, content)
 
     def search_uid(
         self,
@@ -366,9 +366,9 @@ class Log:
         Returns:
             List[str]: The matching UIDs.
         """
-        doc = self.get_doc()
-        file_content = self.load_index(doc + ".index")
-        content = file_content["index"]
+    
+        
+        content = self.doc_index
         uids = []
 
         time_parts = self._parse_time(time) if time else [None, None, None, None]
@@ -409,17 +409,13 @@ class Log:
             log_file (str): The log file name.
         """
         if index_unit == "" or index_unit is None:
-            raise ValueError("ox-db: No data provided for logging")
+            raise ValueError("ox-db: No data provided for logging")        
+        self.doc_index[uid] = index_unit
+        self.doc_reg["entry"] += 1
+        self.save_index()
 
-        file_content = self.load_index(log_file)
-        file_content["index"][uid] = index_unit
-        file_content["ox-db_init"]["doc_entry"] += 1
-        self.doc_entry = file_content["ox-db_init"]["doc_entry"]
 
-        self.save_index(log_file, file_content)
-        print(f"ox-db: Logged data: {uid} in {log_file}")
-
-    def _retrive_doc_all(self, docfile)->dict:
+    def _retrive_doc_all(self, docfile) -> dict:
         """
         Retrieves all the content key value pairs as dict
 
@@ -432,8 +428,7 @@ class Log:
         """
         content = {}
         if docfile == ".index":
-            file_content = self.load_index(self.doc + ".index")
-            content = file_content["index"]
+            content = self.doc_index
         elif docfile == "vec.oxd":
             content = self.vec_oxd.load_data()
         else:
