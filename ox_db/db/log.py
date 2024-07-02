@@ -8,9 +8,12 @@ import bson
 import json
 from datetime import datetime
 from typing import TypeAlias, Union, List, Optional, Any
-from pydantic import BaseModel
-from ox_db.ai.vector import Model
+
+
 from ox_doc.ld import OxDoc
+
+from ox_db.ai.vector import Model
+from ox_db.db.search import search_uid
 
 
 # Type Alias for key, uid, or date queries
@@ -170,8 +173,8 @@ class Doc:
         time: Optional[str] = None,
         date: Optional[str] = None,
         docfile: Optional[str] = "data.oxd",
-        where={"metadata_key": "is_equal_to_this"},
-        where_data={"$contains": "search_string"},
+        where: Optional[dict] = None,
+        where_data: Optional[dict] = None,
     ) -> List[dict]:
         """
         Retrieves log entries based on unique ID, key, time, or date.
@@ -181,10 +184,10 @@ class Doc:
             key (Optional[str], optional): The key of the log entry. Defaults to None.
             time (Optional[str], optional): The time of the log entry. Defaults to None.
             date (Optional[str], optional): The date of the log entry. Defaults to None.
-            docfile (Optional[str], optional): The specific file within the document. Defaults to None.
+            docfile (Optional[str], optional): The specific sub file within the document. Defaults to None.
                 eg : ["data.oxd","vec.oxd",".index"]
             where={"metadata_key": "value"},
-            where_data={"$contains":"search_string"} ,
+            where_data={"in_data":"search_string"} ,
 
         Returns:
             List[dict]: The log entries matching the criteria.
@@ -194,7 +197,7 @@ class Doc:
                 f"""ox-db : docfile should be ["data.oxd","vec.oxd",".index"] not {docfile} """
             )
 
-        all_none = all(var is None for var in [key, uid, time, date])
+        all_none = all(var is None for var in [key, uid, time, date, where, where_data])
 
         log_entries = []
         if all_none:
@@ -227,8 +230,8 @@ class Doc:
             else:
                 return self._pull_oxd_by_uid(uid, docfile)
 
-        if any([key, time, date]):
-            uids = self.search_uid(key, time, date)
+        if any([key, time, date, where]):
+            uids = self.search_uid(key, time, date, where)
             log_entries_data = self.pull(uid=uids, docfile=docfile)
             log_entries.extend(log_entries_data)
             return log_entries
@@ -256,6 +259,7 @@ class Doc:
         key: Optional[str] = None,
         time: Optional[str] = None,
         date: Optional[str] = None,
+        where: Optional[dict] = None,
         log_entries: Optional[List[dict]] = None,
         by: Optional[str] = "dp",
     ) -> List[dict]:
@@ -269,6 +273,7 @@ class Doc:
             key (Optional[str], optional): The key of the log entry. Defaults to None.
             time (Optional[str], optional): The time of the log entry. Defaults to None.
             date (Optional[str], optional): The date of the log entry. Defaults to None.
+            where={"metadata_key": "value"},
             log_entries (Optional[List[dict]], optional): The log entry [{"uid":uid,unit:{"data":data,"description":description}}]  Defaults to None.
             by (Optional[str], optional): method of search
                 dp : Dot Product (default)
@@ -279,7 +284,9 @@ class Doc:
         Returns:
             List[dict]: The log entries matching the search query.
         """
-        log_entries = log_entries or self.pull(uid, key, time, date, docfile="vec.oxd")
+        log_entries = log_entries or self.pull(
+            uid, key, time, date, docfile="vec.oxd", where=where
+        )
         dataset = [entry["unit"] for entry in log_entries]
         top_idx = self.vec.search(query, dataset, topn=topn, by=by)
         if len(top_idx) == 0:
@@ -361,42 +368,6 @@ class Doc:
             with open(log_file_path, mode) as file:
                 write_file(file, content)
 
-    def search_uid(
-        self,
-        key: Optional[str] = None,
-        time: Optional[str] = None,
-        date: Optional[str] = None,
-    ) -> List[str]:
-        """
-        Searches for UIDs based on key, time, or date.
-
-        Args:
-            key (Optional[str], optional): The key to search. Defaults to None.
-            time (Optional[str], optional): The time to search. Defaults to None.
-            date (Optional[str], optional): The date to search. Defaults to None.
-
-        Returns:
-            List[str]: The matching UIDs.
-        """
-
-        content = self.doc_index
-        uids = []
-
-        time_parts = self._parse_time(time) if time else [None, None, None, None]
-        date_parts = self._parse_date(date) if date else [None, None, None]
-
-        for uid, data in content.items():
-            log_it = (
-                self._match_time(data["time"], time_parts)
-                or self._match_date(data["date"], date_parts)
-                or key == data["key"]
-            )
-
-            if log_it:
-                uids.append(uid)
-
-        return uids
-
     def push_index(self, uid: str, index_unit: Any, log_file: str):
         """
         Pushes data to a specified log file.
@@ -432,7 +403,27 @@ class Doc:
             content = self.data_oxd.load_data()
         return content
 
-    @staticmethod
+    def search_uid(
+        self,
+        key: Optional[str] = None,
+        time: Optional[str] = None,
+        date: Optional[str] = None,
+        where: Optional[dict] = None,
+    ) -> List[str]:
+        """
+        Searches for UIDs based on key, time, or date.
+
+        Args:
+            key (Optional[str], optional): The key to search. Defaults to None.
+            time (Optional[str], optional): The time to search. Defaults to None.
+            date (Optional[str], optional): The date to search. Defaults to None.
+
+        Returns:
+            List[str]: The matching UIDs.
+        """
+        res = search_uid(self.doc_index, key, time, date, where)
+        return res
+
     def _convert_input(*args: Union[str, List[str]]) -> List[List[str]]:
         """
         Converts input arguments to lists if they are strings.
@@ -444,65 +435,3 @@ class Doc:
             List[List[str]]: The converted arguments.
         """
         return [[arg] if isinstance(arg, str) else arg or [] for arg in args]
-
-    @staticmethod
-    def _parse_time(time: str) -> List[Optional[str]]:
-        """
-        Parses a time string into components.
-
-        Args:
-            time (str): The time string.
-
-        Returns:
-            List[Optional[str]]: The time components.
-        """
-        time_parts, period = (
-            time.split("_") if "_" in time else (time, datetime.now().strftime("%p"))
-        )
-        return time_parts.split(":") + [period]
-
-    @staticmethod
-    def _parse_date(date: str) -> List[Optional[str]]:
-        """
-        Parses a date string into components.
-
-        Args:
-            date (str): The date string.
-
-        Returns:
-            List[Optional[str]]: The date components.
-        """
-        return date.split("_")
-
-    @staticmethod
-    def _match_time(log_time: str, query_time: List[Optional[str]]) -> bool:
-        """
-        Checks if the log time matches the query time.
-
-        Args:
-            log_time (str): The log time.
-            query_time (List[Optional[str]]): The query time components.
-
-        Returns:
-            bool: Whether the log time matches the query time.
-        """
-        log_time_parts = log_time.split("_")[0].split(":") + [log_time.split("_")[1]]
-        return (
-            log_time_parts[: len(query_time) - 1] == query_time[:-1]
-            and log_time_parts[-1] == query_time[-1]
-        )
-
-    @staticmethod
-    def _match_date(log_date: str, query_date: List[Optional[str]]) -> bool:
-        """
-        Checks if the log date matches the query date.
-
-        Args:
-            log_date (str): The log date.
-            query_date (List[Optional[str]]): The query date components.
-
-        Returns:
-            bool: Whether the log date matches the query date.
-        """
-        log_date_parts = log_date.split("_")
-        return log_date_parts[: len(query_date)] == query_date
