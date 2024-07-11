@@ -4,7 +4,6 @@ data maped to cluster page and virtual page
 """
 
 import os
-import uuid
 import bson
 import json
 from datetime import datetime

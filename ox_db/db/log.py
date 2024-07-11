@@ -3,7 +3,6 @@ log handles the database work flow
 """
 
 import os
-import uuid
 import bson
 import json
 from datetime import datetime
@@ -172,8 +171,8 @@ class Doc:
             "uid": uid,
             "key": key or "key",
             "doc": doc,
-            "time": datetime.now().strftime("%I:%M:%S_%p"),
-            "date": datetime.now().strftime("%d_%m_%Y"),
+            "time": datetime.now().strftime("%H:%M:%S"),
+            "date": datetime.now().strftime("%d-%m-%Y"),
             "metadata": metadata,
             "data_type": kwargs.get("data_type", type(data).__name__),
         }

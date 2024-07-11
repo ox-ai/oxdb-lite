@@ -24,15 +24,13 @@ def search_uid(
     content = doc_index
     uids = []
 
-    time_parts = _parse_time(time) if time else None
-    date_parts = _parse_date(date) if date else None
-
+  
     for uid, data in content.items():
         log_it = (
             (key == data["key"] if key else True)
             and (_metadata_filter(where, data["metadata"]) if where else True)
-            and (_match_time(time_parts, data["time"]) if time_parts else True)
-            and (_match_date(date_parts, data["date"]) if date_parts else True)
+            and (_match_time(time, data["time"]) if time else True)
+            and (_match_date(date, data["date"]) if date else True)
         )
 
         if log_it:
@@ -60,36 +58,9 @@ def _metadata_filter(query_dict: dict, data_dict: dict):
     return False
 
 
-def _parse_time(time: str) -> List[Optional[str]]:
-    """
-    Parses a time string into components.
-
-    Args:
-        time (str): The time string.
-
-    Returns:
-        List[Optional[str]]: The time components.
-    """
-    time_parts, period = (
-        time.split("_") if "_" in time else (time, datetime.now().strftime("%p"))
-    )
-    return time_parts.split(":") + [period]
 
 
-def _parse_date(date: str) -> List[Optional[str]]:
-    """
-    Parses a date string into components.
-
-    Args:
-        date (str): The date string.
-
-    Returns:
-        List[Optional[str]]: The date components.
-    """
-    return date.split("_")
-
-
-def _match_time(query_time: List[Optional[str]], log_time: str) -> bool:
+def _match_time(query_time: str, log_time: str) -> bool:
     """
     Checks if the log time matches the query time.
 
@@ -100,14 +71,14 @@ def _match_time(query_time: List[Optional[str]], log_time: str) -> bool:
     Returns:
         bool: Whether the log time matches the query time.
     """
-    log_time_parts = log_time.split("_")[0].split(":") + [log_time.split("_")[1]]
+    log_time_parts = log_time.split(":") 
+    query_time = query_time.split(":") 
     return (
-        log_time_parts[: len(query_time) - 1] == query_time[:-1]
-        and log_time_parts[-1] == query_time[-1]
+        log_time_parts[: len(query_time)] == query_time
     )
 
 
-def _match_date(query_date: List[Optional[str]], log_date: str) -> bool:
+def _match_date(query_date: str, log_date: str) -> bool:
     """
     Checks if the log date matches the query date.
 
@@ -118,5 +89,6 @@ def _match_date(query_date: List[Optional[str]], log_date: str) -> bool:
     Returns:
         bool: Whether the log date matches the query date.
     """
-    log_date_parts = log_date.split("_")
+    query_date = query_date.split("-")
+    log_date_parts = log_date.split("-")
     return log_date_parts[: len(query_date)] == query_date
