@@ -7,18 +7,19 @@ import uuid
 import bson
 import json
 from datetime import datetime
-from typing import TypeAlias, Union, List, Optional, Any
-
+from typing import Dict, TypeAlias, Union, List, Optional, Any
+from ox_db.db.types import embd,uids
 
 from ox_doc.ld import OxDoc
-
 from ox_db.ai.vector import Model
 from ox_db.db.search import search_uid
 
+from ox_db.utils.dp import gen_uid, strorlist_to_list
 
-# Type Alias for key, uid, or date queries
-SLBUnion: TypeAlias = Union[str, List[str], bool]
-SLUnion: TypeAlias = Union[str, List[str]]
+
+
+
+
 
 
 class Oxdb:
@@ -85,9 +86,21 @@ class Oxdb:
         """
         pass
 
+    def info(self) -> dict:
+
+        res = {
+            "db": self.db,
+            "db_path": self.db_path,
+            "doc_name": self.doc.doc_name,
+            "doc_path": self.doc.doc_path,
+            "vec_model": self.vec.md_name,
+        }
+        return res
+
 
 class Doc:
     def __init__(self, doc: Optional[str] = None):
+        """db doc handler"""
         self.doc_name = doc or "log-" + datetime.now().strftime("[%d_%m_%Y]")
 
     def connect_db(self, db_path, vec):
@@ -115,16 +128,25 @@ class Doc:
             str: The document name.
         """
         return self.doc_name
+    
+    def info(self)->dict:
+        res = {
+            
+            "doc_name": self.doc_name,
+            "doc_path": self.doc_path,
+            "doc_reg":self.doc_reg
+        }
+        return res
 
     def push(
         self,
         data: Any,
-        embeddings: SLBUnion = True,
+        embeddings: embd = True,
         description: Optional[any] = None,
-        metadata: Optional[dict] = None,
+        metadata: Optional[Dict[str, Any]] = None,
         key: Optional[str] = None,
         **kwargs,
-    ) -> str:
+    )->str:
         """
         Pushes data to the log file. Can be called with either data or both key and data.
 
@@ -140,7 +162,7 @@ class Doc:
             str: The unique ID of the log entry.
         """
         doc = self.get_doc_name()
-        uid = self.gen_uid()
+        uid = gen_uid()
 
         if data == "" or data is None:
             raise ValueError("ox-db : No data provided for logging")
@@ -168,7 +190,7 @@ class Doc:
 
     def pull(
         self,
-        uid: Optional[SLUnion] = None,
+        uid: uids = None,
         key: Optional[str] = None,
         time: Optional[str] = None,
         date: Optional[str] = None,
@@ -180,7 +202,7 @@ class Doc:
         Retrieves log entries based on unique ID, key, time, or date.
 
         Args:
-            uid (Optional[SLUnion], optional): The unique ID of the log entry. Defaults to None.
+            uid (uids): The unique ID of the log entry. Defaults to None.
             key (Optional[str], optional): The key of the log entry. Defaults to None.
             time (Optional[str], optional): The time of the log entry. Defaults to None.
             date (Optional[str], optional): The date of the log entry. Defaults to None.
@@ -212,7 +234,7 @@ class Doc:
             return log_entries
 
         if uid is not None:
-            uids = Doc._convert_input(uid)[0]
+            uids = strorlist_to_list(uid)
 
             if docfile == ".index":
 
@@ -228,7 +250,7 @@ class Doc:
                         )
                 return log_entries
             else:
-                return self._pull_oxd_by_uid(uid, docfile)
+                return self._pull_oxd_by_uid(uids, docfile)
 
         if any([key, time, date, where]):
             uids = self.search_uid(key, time, date, where)
@@ -255,13 +277,15 @@ class Doc:
         self,
         query: str,
         topn: int = 10,
-        uid: Optional[SLUnion] = None,
+        log_entries: Optional[List[dict]] = None,
+        by: Optional[str] = "dp",
+        uid: uids = None,
         key: Optional[str] = None,
         time: Optional[str] = None,
         date: Optional[str] = None,
         where: Optional[dict] = None,
-        log_entries: Optional[List[dict]] = None,
-        by: Optional[str] = "dp",
+        where_data: Optional[dict] = None,
+        
     ) -> List[dict]:
         """
         Searches log entries based on a query and retrieves the top matching results.
@@ -269,7 +293,7 @@ class Doc:
         Args:
             query (str): The search query.
             topn (int, optional): Number of top results to return. Defaults to 10.
-            uid (Optional[SLUnion], optional): The unique ID(s) of the log entry. Defaults to None.
+            uid (uids, optional): The unique ID(s) of the log entry. Defaults to None.
             key (Optional[str], optional): The key of the log entry. Defaults to None.
             time (Optional[str], optional): The time of the log entry. Defaults to None.
             date (Optional[str], optional): The date of the log entry. Defaults to None.
@@ -299,7 +323,7 @@ class Doc:
     def show(
         self,
         key: Optional[str] = None,
-        uid: Optional[SLUnion] = None,
+        uid: uids = None,
         time: Optional[str] = None,
         doc: Optional[str] = None,
         date: Optional[str] = None,
@@ -311,16 +335,6 @@ class Doc:
         # Placeholder for future implementation
         pass
 
-    @classmethod
-    def gen_uid(cls) -> str:
-        """
-        Generates a unique ID for a log entry.
-
-        Returns:
-            str: The unique ID.
-        """
-        uid = str(uuid.uuid4())
-        return uid
 
     def load_index(self) -> dict:
         """
@@ -424,14 +438,6 @@ class Doc:
         res = search_uid(self.doc_index, key, time, date, where)
         return res
 
-    def _convert_input(*args: Union[str, List[str]]) -> List[List[str]]:
-        """
-        Converts input arguments to lists if they are strings.
 
-        Args:
-            args (Union[str, List[str]]): The input arguments.
 
-        Returns:
-            List[List[str]]: The converted arguments.
-        """
-        return [[arg] if isinstance(arg, str) else arg or [] for arg in args]
+
