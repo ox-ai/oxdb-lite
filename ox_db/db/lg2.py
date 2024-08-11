@@ -13,7 +13,6 @@ from ox_db.db.types import embd, uids
 from ox_doc.ld import OxDoc
 from ox_db.ai.vector import Model as vmd
 from ox_db.ai.transfomer import Model as tmd
-from ox_db.db.search import search_uid
 from ox_db.utils.dp import gen_uid, join_list, strorlist_to_list
 
 

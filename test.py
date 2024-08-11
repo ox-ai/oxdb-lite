@@ -1,6 +1,10 @@
+from ox_db.db.log import Oxdb
+
+db = Oxdb("test-lg1")
 
 
-# Example usage
-from ox_db.shell.log import start
+doc = db.get_doc("note")
 
-start()
+res= doc.search("ox-studio.ui", 3)
+
+print(res)

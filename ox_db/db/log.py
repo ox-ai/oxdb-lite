@@ -11,7 +11,6 @@ from ox_db.db.types import embd, uids
 
 from ox_doc.ld import OxDoc
 from ox_db.ai.vector import Model
-from ox_db.db.search import search_uid
 
 from ox_db.utils.dp import gen_uid, strorlist_to_list
 
@@ -96,6 +95,14 @@ class Doc:
     def __init__(self, doc: Optional[str] = None):
         """db doc handler"""
         self.doc_name = doc or "log-" + datetime.now().strftime("[%d_%m_%Y]")
+
+    # def __del__(self):
+    #     print("db destroyed : presisting")
+    #     self.save_index()
+
+    # def __exit__(self, exc_type, exc_value, traceback):
+    #     print("Exiting the db : presisting")
+    #     self.save_index()
 
     def connect_db(self, db_path, vec):
         self.db_path = db_path
@@ -214,16 +221,11 @@ class Doc:
 
         all_none = all(var is None for var in [key, uid, time, date, where, where_data])
 
-        log_entries = []
+        log_entries = {}
         if all_none:
             content = self._retrive_doc_all(docfile)
             for uidx, unit in content.items():
-                log_entries.append(
-                    {
-                        "uid": uidx,
-                        "unit": unit,
-                    }
-                )
+                log_entries[uidx] = unit
             return log_entries
 
         if uid is not None:
@@ -232,15 +234,10 @@ class Doc:
             if docfile == ".index":
 
                 content = self.doc_index
-                for u in uids:
-                    if u in content:
-                        unit = content[u]
-                        log_entries.append(
-                            {
-                                "uid": u,
-                                "unit": unit,
-                            }
-                        )
+                for uidx in uids:
+                    if uidx in content:
+                        unit = content[uidx]
+                        log_entries[uidx] = unit
                 return log_entries
             else:
                 return self._pull_oxd_by_uid(uids, docfile)
@@ -248,22 +245,16 @@ class Doc:
         if any([key, time, date, where]):
             uids = self.search_uid(key, time, date, where)
             log_entries_data = self.pull(uid=uids, docfile=docfile)
-            log_entries.extend(log_entries_data)
-            return log_entries
+            return log_entries_data
 
     def _pull_oxd_by_uid(self, uids, docfile):
-        log_entries = []
+        log_entries = {}
         oxd_doc = self.vec_oxd if docfile == "vec.oxd" else self.data_oxd
-        for u in uids:
-            unit = oxd_doc.get(u)
+        for uidx in uids:
+            unit = oxd_doc.get(uidx)
             if not unit:
                 continue
-            log_entries.append(
-                {
-                    "uid": u,
-                    "unit": unit,
-                }
-            )
+            log_entries[uidx] = unit
         return log_entries
 
     def search(
@@ -278,6 +269,7 @@ class Doc:
         date: Optional[str] = None,
         where: Optional[dict] = None,
         where_data: Optional[dict] = None,
+        includes: Optional[list] = ["uid", "data", "description"],
     ) -> List[dict]:
         """
         Searches log entries based on a query and retrieves the top matching results.
@@ -300,17 +292,49 @@ class Doc:
         Returns:
             List[dict]: The log entries matching the search query.
         """
-        log_entries = log_entries or self.pull(
+        vec_log_entries = log_entries or self.pull(
             uid, key, time, date, docfile="vec.oxd", where=where
         )
-        dataset = [entry["unit"] for entry in log_entries]
+        dataset_uids = list(vec_log_entries.keys())
+        dataset = list(vec_log_entries.values())
         top_idx = self.vec.search(query, dataset, topn=topn, by=by)
+        search_res = {
+            "entries": 0,
+            "uid": [],
+            "data": [],
+            "description": [],
+            "index": [],
+            "embeddings": [],
+        }
         if len(top_idx) == 0:
-            return [{"uid": None, "unit": {"data": None, "description": None}}]
-        uids = [log_entries[idx]["uid"] for idx in top_idx]
-        res_data = self.pull(uid=uids)
+            return search_res
 
-        return res_data
+        uids = []
+        embeddings = []
+
+        for idx in top_idx:
+            uids.append(dataset_uids[idx])
+            embeddings.append(dataset[idx])
+
+        res_len = len(uids)
+        search_res["entries"] = res_len
+        search_res["uid"] = uids
+        if "embeddings" in includes:
+            search_res["embeddings"] = embeddings
+
+        data_log_entries = self.pull(uid=uids)
+        index_log_entries = self.pull(uid=uids, docfile=".index")
+
+        res_data = list(data_log_entries.values())
+        res_index = list(index_log_entries.values())
+
+        search_res["index"] = res_index
+
+        for i in range(res_len):
+            search_res["data"].append(res_data[i]["data"])
+            search_res["description"].append(res_data[i]["description"])
+
+        return search_res
 
     def show(
         self,
@@ -422,9 +446,74 @@ class Doc:
             key (Optional[str], optional): The key to search. Defaults to None.
             time (Optional[str], optional): The time to search. Defaults to None.
             date (Optional[str], optional): The date to search. Defaults to None.
-
+            where={"metadata_key": "value"}.
         Returns:
             List[str]: The matching UIDs.
         """
-        res = search_uid(self.doc_index, key, time, date, where)
-        return res
+
+        content = self.doc_index
+        uids = []
+
+        for uid, data in content.items():
+            log_it = (
+                (key == data["key"] if key else True)
+                and (self._metadata_filter(where, data["metadata"]) if where else True)
+                and (self._match_time(time, data["time"]) if time else True)
+                and (self._match_date(date, data["date"]) if date else True)
+            )
+
+            if log_it:
+                uids.append(uid)
+
+        return uids
+
+    @staticmethod
+    def _metadata_filter(query_dict: dict, data_dict: dict):
+        """
+        Checks if atlest one key-value pair from the query_dict is present in the data_dict
+
+        Args:
+            query_dictd dict :  key-value
+            data_dict dict :  key-value
+
+        Returns:
+            True if atlest one key-value pair or query_dict present in data_dict
+        """
+        if data_dict is None:
+            return False
+        for key in query_dict.keys():
+            if query_dict[key] == data_dict.get(key):
+                return True
+        return False
+
+    @staticmethod
+    def _match_time(query_time: str, log_time: str) -> bool:
+        """
+        Checks if the log time matches the query time.
+
+        Args:
+            log_time (str): The log time.
+            query_time (List[Optional[str]]): The query time components.
+
+        Returns:
+            bool: Whether the log time matches the query time.
+        """
+        log_time_parts = log_time.split(":")
+        query_time = query_time.split(":")
+        return log_time_parts[: len(query_time)] == query_time
+
+    @staticmethod
+    def _match_date(query_date: str, log_date: str) -> bool:
+        """
+        Checks if the log date matches the query date.
+
+        Args:
+            log_date (str): The log date.
+            query_date (List[Optional[str]]): The query date components.
+
+        Returns:
+            bool: Whether the log date matches the query date.
+        """
+        query_date = query_date.split("-")
+        log_date_parts = log_date.split("-")
+        return log_date_parts[: len(query_date)] == query_date

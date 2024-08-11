@@ -33,7 +33,7 @@ class Model:
         topn_idx = np.argsort(sim, axis=0)[-topn:][::-1].tolist()
 
 
-        return topn_idx
+        return topn_idx 
 
 
 
