@@ -1,7 +1,9 @@
-fastapi==0.111.0
+fastapi==0.112.0
 numpy==1.24.1
-pydantic==2.7.4
+pydantic==2.8.2
 pymongo==4.8.0
 sentence_transformers==3.0.1
-setuptools==68.1.2
+setuptools==72.1.0
+transformers==4.41.2
+uvicorn==0.30.5
 ox-doc @ git+https://github.com/ox-ai/ox-doc.git#egg=ox-doc
