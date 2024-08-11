@@ -1,3 +1,4 @@
+import uvicorn
 from ox_db.shell.log import run,db
 
 from fastapi import FastAPI, HTTPException
@@ -34,6 +35,9 @@ def push(script:str):
     return result
 
 
+def run_code():
+    uvicorn.run(app, reload=True,host='0.0.0.0', port=8000)
 
 
-
+if __name__ == '__main__':
+    run_code()

@@ -71,7 +71,7 @@ def run(script):
 
 def start():
     while True:
-        cmd =str(input("ox-shell : "))
+        cmd =str(input("ox-db> "))
         run(cmd)
 
 def ox(cmd_dict):
