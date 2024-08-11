@@ -7,18 +7,13 @@ import bson
 import json
 from datetime import datetime
 from typing import Dict, TypeAlias, Union, List, Optional, Any
-from ox_db.db.types import embd,uids
+from ox_db.db.types import embd, uids
 
 from ox_doc.ld import OxDoc
 from ox_db.ai.vector import Model
 from ox_db.db.search import search_uid
 
 from ox_db.utils.dp import gen_uid, strorlist_to_list
-
-
-
-
-
 
 
 class Oxdb:
@@ -60,7 +55,7 @@ class Oxdb:
         Returns:
             str: The database path.
         """
-        return self.db_path
+        return self.db
 
     def get_doc(self, doc: Optional[str] = None):
         """
@@ -127,13 +122,12 @@ class Doc:
             str: The document name.
         """
         return self.doc_name
-    
-    def info(self)->dict:
+
+    def info(self) -> dict:
         res = {
-            
             "doc_name": self.doc_name,
             "doc_path": self.doc_path,
-            "doc_reg":self.doc_reg
+            "doc_reg": self.doc_reg,
         }
         return res
 
@@ -145,7 +139,7 @@ class Doc:
         metadata: Optional[Dict[str, Any]] = None,
         key: Optional[str] = None,
         **kwargs,
-    )->str:
+    ) -> str:
         """
         Pushes data to the log file. Can be called with either data or both key and data.
 
@@ -284,7 +278,6 @@ class Doc:
         date: Optional[str] = None,
         where: Optional[dict] = None,
         where_data: Optional[dict] = None,
-        
     ) -> List[dict]:
         """
         Searches log entries based on a query and retrieves the top matching results.
@@ -333,7 +326,6 @@ class Doc:
     def embed_all(self, doc: str):
         # Placeholder for future implementation
         pass
-
 
     def load_index(self) -> dict:
         """
@@ -436,7 +428,3 @@ class Doc:
         """
         res = search_uid(self.doc_index, key, time, date, where)
         return res
-
-
-
-
