@@ -70,7 +70,7 @@ uvicorn ox_db.api.log:app
 | vector integration        | ip     | log vecctor data base                                   |
 | query engine              | ip     | vector search                                           |
 | demon search engine       |        | optimized search                                        |
-| tree load                 |        | vector storage system                                   |
+| onxx runtime              |        | efficiend vectorizer in onxx                            |
 | key lang translator       |        | natural lang to key lang                                |
 | plugin integration        |        | system to write add-on to intract with vector data base |
 | data structurer as plugin |        | structure raw data to custom format                     |
@@ -82,13 +82,19 @@ uvicorn ox_db.api.log:app
 ├── __init__.py
 ├── ai
 │   ├── __init__.py
+│   ├── transfomer.py
 │   └── vector.py
 ├── api
 │   ├── __init__.py
 │   └── log.py
 ├── db
 │   ├── __init__.py
-│   └── log.py
+│   ├── log.py
+│   └── types.py
 ├── settings.py
+├── shell
+│   ├── log.py
+│   └── log_api.py
 └── utils
+    └── dp.py
 ```

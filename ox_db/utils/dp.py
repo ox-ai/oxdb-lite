@@ -1,3 +1,4 @@
+import os
 from typing import List, Union
 import uuid
 
@@ -30,3 +31,8 @@ def strorlist_to_list(arg: Union[str, List[str]]) -> List[List[str]]:
         List[List[str]]: The converted arguments. or None
     """
     return [arg] if isinstance(arg, str) else arg or [] 
+
+
+def get_immediate_subdirectories(path:str):
+  """Returns a list of immediate subdirectories in the given path."""
+  return [name for name in os.listdir(path) if os.path.isdir(os.path.join(path, name))]
