@@ -1,5 +1,6 @@
 import json
 import os
+import socket
 import uuid
 import hashlib
 from typing import List, Union
@@ -82,3 +83,18 @@ def to_json_string(data):
         print(f"Error converting data to JSON: {e}")
         json_string = str(data)  # Fallback to string representation
     return json_string
+
+
+def get_local_ip():
+    # Create a socket to find the local IP address
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # This IP address doesn't need to be reachable; it's just used to determine the local IP
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+    except Exception:
+        local_ip = "127.0.0.1"  # Fallback to localhost if unable to determine IP
+    finally:
+        s.close()
+    
+    return local_ip

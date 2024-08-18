@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from ox_db.db.log import Oxdb
 from ox_db.db.types import PullModel, PushModel, SearchModel
 from ox_db.shell.log import OxdbShell
+from ox_db.utils.dp import get_local_ip
 
 app = FastAPI()
 
@@ -27,10 +28,7 @@ app.add_middleware(
 
 # Global variable to store the API key
 
-API_KEY =  os.getenv("OXDB_API_KEY") or "ox-db-prime"
-# Set the environment variable
-os.environ["OXDB_API_KEY"] = API_KEY
-
+API_KEY = os.getenv("OXDB_API_KEY") or "ox-db-prime"
 
 db = Oxdb("hosted")
 oxdb_shell = OxdbShell(db)
@@ -115,31 +113,48 @@ def source_app():
 
 def run_server(
     app_source="ox_db.server.log:app",
-    apikey=API_KEY,
+    apikey=None,
     reload=True,
-    host="0.0.0.0",
+    host=None,
     port=8000,
-    **kwargs
+    **kwargs,
 ):
+    # Automatically determine the local IP if not specified
 
-    os.environ["OXDB_API_KEY"] = apikey or "ox-db-prime"
+    if host == True:
+        host = get_local_ip()
+    elif not host:
+        host = "127.0.0.1"  # defaults to local host
+
+    # Set the API key from the command-line argument
+    os.environ["OXDB_API_KEY"] = apikey or os.getenv("OXDB_API_KEY") or "ox-db-prime"
+    global API_KEY
+    API_KEY = os.getenv("OXDB_API_KEY")
+
+    # Print the host to verify the behavior
+    print(f"Host: {host} port: {port} apikey: {API_KEY} reload: {reload}")
     uvicorn.run(app_source, reload=reload, host=host, port=port, **kwargs)
 
 
-def run_main_server(app_source="ox_db.server.log:app"):
-
+def main(app_source="ox_db.server.log:app"):
     parser = argparse.ArgumentParser(description="Run the OxDB FastAPI server.")
-    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host address")
+    parser.add_argument(
+        "--host", nargs="?", const=True, default=None, help="Host address"
+    )
     parser.add_argument("--port", type=int, default=8000, help="Port number")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
     parser.add_argument("--apikey", type=str, help="API key for authentication")
 
     args = parser.parse_args()
-    # Set the API key from the command-line argument
-    os.environ["OXDB_API_KEY"] = args.apikey or "ox-db-prime"
-    
-    uvicorn.run(app_source, host=args.host, port=args.port, reload=args.reload)
+
+    run_server(
+        app_source,
+        host=args.host,
+        port=args.port,
+        apikey=args.apikey,
+        reload=args.reload,
+    )
 
 
 if __name__ == "__main__":
-    run_main_server()
+    main()

@@ -15,7 +15,7 @@ setup(
     entry_points={
         "console_scripts": [
             "oxdb.shell=ox_db.shell.log:main", 
-            "oxdb.server=ox_db.server.log:run_server", 
+            "oxdb.server=ox_db.server.log:main", 
         ],
     },
     include_package_data=True,

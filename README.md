@@ -2,7 +2,7 @@
 
 ## about :
 
-**ox-db** is an open-source On-Premises vector database specifically designed for storing and retrieving vector embeddings and also build rag system for ai assistent knowledge database storage
+**ox-db** is an open-source, AI-native vector embedding database tailored for efficient storage and retrieval of vector embeddings. It is also designed to support the construction of Retrieval-Augmented Generation (RAG) systems, making it an ideal solution for managing knowledge databases in AI assistant applications.
 
 ## Installation:
 
@@ -76,7 +76,7 @@ oxdb.shell
 ```
 
 ```bash
-oxdb.shell -- "shell command"
+oxdb.shell "shell command"
 ```
 
 ```bash
@@ -85,14 +85,20 @@ python -m ox_db.shell.log
 
 ### ox-db server
 
-to start ox-db server run below commend refer [docs.api.log](./docs/api.log.md)
+to start ox-db server run below commend refer [server.log.md](./docs/server.log.md)
 
 ```bash
-oxdb.server --apikey "ox-db-prime"
+#default apikey = "ox-db-prime"
+export OXDB_API_KEY="test-apikey"
+echo $OXDB_API_KEY  
+
+```
+```bash
+oxdb.server --apikey "ox-db-prime" --host
 ```
 
 ```bash
-python -m ox_db.server.log --apikey "hi0x"
+python -m ox_db.server.log --apikey "hi0x" --host
 ```
 
 ```bash

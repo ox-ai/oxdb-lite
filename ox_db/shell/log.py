@@ -74,7 +74,6 @@ class OxdbShell:
                         args = shell_command[arg_start:arg_end]
                         translated_command = value.replace("{}", args)
 
-                    print(1, translated_command)
                     return translated_command
 
                 # Handle dictionary-style arguments for push, pull, search
@@ -91,8 +90,6 @@ class OxdbShell:
                     args_string = f"{args}"
 
                     translated_command = value.replace("{}", args_string)
-
-                    print(2, translated_command)
 
                     return translated_command
                     # Handle dictionary-style arguments for push, pull, search
@@ -111,32 +108,36 @@ class OxdbShell:
 
                     translated_command = value.replace("{}", args_string)
 
-                    print(2, translated_command)
-
                     return translated_command
 
         return shell_command
 
-    def run(self, shell_commands: str):
-        final_res: Any = None
-        commands = shell_commands.split(",")
+    def run(self, shell_commands: str,terminal_execution=False):
+        shell_res = []
+        commands = shell_commands.split("||")
         for command in commands:
             command = command.strip()
             if self.validate_command(command):
                 translated_command = self.translate_command(command)
                 try:
-                    final_res = eval(f"self.{translated_command}")
-                    print("oxdb : ")
-                    pprint(final_res)
-
+                    db_result = eval(f"self.{translated_command}")
+                    db_responce = True
                 except Exception as e:
-                    print("oxdb : ")
-                    print(f"db req  : [{translated_command}] failed")
-                    print(f"error   : {e}")
+                    db_result = (
+                        f"db req    : [{translated_command}] failed \nerror     : {e}"
+                    )
+                    db_responce = False
 
             else:
+                db_result = f"db req      : [{command}] failed Invalid command"
+                db_responce = False
+
+            shell_res.append({"db_result": db_result, "db_responce": db_responce})
+            if terminal_execution :
                 print("oxdb : ")
-                print(f"db req      : [{command}] failed Invalid command")
+                pprint(db_result)
+
+        return shell_res
 
 
 def main():
@@ -145,12 +146,12 @@ def main():
 
     if len(sys.argv) > 1:
         shell_commands = " ".join(sys.argv[1:])
-        oxdb_shell.run(shell_commands)
+        oxdb_shell.run(shell_commands,terminal_execution=True)
     else:
         while True:
             try:
                 shell_commands = input("oxdb> ")
-                oxdb_shell.run(shell_commands)
+                oxdb_shell.run(shell_commands,terminal_execution=True)
             except (KeyboardInterrupt, EOFError):
                 print("\nExiting shell...")
                 break
