@@ -5,15 +5,21 @@
 import os
 import bson
 from datetime import datetime
-from typing import Dict, Union, List, Optional, Any
-from ox_db.db.types import embd, uids
+from typing import Dict, ForwardRef, Union, List, Optional, Any
 
 from ox_doc.ld import OxDoc
+
+from ox_db.db.types import embd, hids, DOCFILE_LIST
 from ox_db.ai.vector import Model
+from ox_db.utils.dp import (
+    gen_hid,
+    get_immediate_subdirectories,
+    strorlist_to_list,
+    to_json_string,
+)
 
-from ox_db.utils.dp import gen_uid, get_immediate_subdirectories, strorlist_to_list
-
-DOCFILE_LIST = ["data.oxd", "vec.oxd", ".index"]
+dbDoc = ForwardRef("dbDoc")
+vec_model = Model()
 
 
 class Oxdb:
@@ -26,27 +32,14 @@ class Oxdb:
             db_path (Optional[str], optional): The path to the database directory. Defaults to None.
         """
         self.db: str = db
-        self.db_path: str = self.set_db(db, db_path)
-        self.vec: Model = Model()
-        self.doc: Optional[OxDoc] = None
+        self.vec: Model = vec_model
+        self.doc: Optional[dbDoc] = None
         self.doc_list: List[str] = []
 
-    def set_db(self, db: str, db_path: Optional[str] = None) -> str:
-        """
-        Sets the database name and path, ensuring that the directory exists.
+        self.db_path: str = None
+        self.get_db(db, db_path)
 
-        Args:
-            db (str): The name of the database.
-            db_path (Optional[str]): The path to the database directory.
-
-        Returns:
-            str: The validated and potentially updated path to the database.
-        """
-        self.db = db
-        self.db_path = self._db_path_validator(db, db_path)
-        os.makedirs(self.db_path, exist_ok=True)
-        return self.db_path
-
+    
     def get_db(self, db: str = "", db_path: Optional[str] = None) -> str:
         """
         Returns the current database path, optionally updating the database name and path.
@@ -58,7 +51,12 @@ class Oxdb:
         Returns:
             str: The validated and potentially updated path to the database.
         """
-        return self.set_db(db, db_path)
+        self.db = db
+        self.db_path = self._db_path_validator(db, db_path)
+        os.makedirs(self.db_path, exist_ok=True)
+        self.get_doc()
+    
+        return self.info
 
     def _db_path_validator(self, db: str = "", db_path: Optional[str] = None) -> str:
         """
@@ -83,7 +81,7 @@ class Oxdb:
 
         return final_path
 
-    def get_doc(self, doc: Optional[str] = None) -> OxDoc:
+    def get_doc(self, doc: Optional[str] = None) -> dbDoc:  # type: ignore # Forward reference
         """
         Returns an instance of the OxDoc class, connecting it to the database.
 
@@ -91,9 +89,9 @@ class Oxdb:
             doc (Optional[str], optional): The document name. Defaults to None.
 
         Returns:
-            OxDoc: An instance of the OxDoc class.
+            dbDoc: An instance of the dbDoc class.
         """
-        self.doc = Doc(doc)
+        self.doc = dbDoc(doc)
         self.doc.connect_db(self.db_path, self.vec)
         return self.doc
 
@@ -119,22 +117,16 @@ class Oxdb:
             "db_path": self.db_path,
             "doc_name": self.doc.doc_name if self.doc else None,
             "doc_path": self.doc.doc_path if self.doc else None,
-            "doc_list": self.doc_list,
+            "doc_list": self.get_docs(),
             "vec_model": self.vec.md_name,
         }
         return res
 
 
-import os
-from datetime import datetime
-from typing import Optional, Dict, Any
-from ox_doc.ld import OxDoc
-
-
-class Doc:
+class dbDoc:
     def __init__(self, doc: Optional[str] = None):
         """
-        Initializes an instance of the Doc class, representing a document handler or pointer object.
+        Initializes an instance of the dbDoc class, representing a document handler or pointer object.
 
         Args:
             doc (Optional[str], optional): The name of the document. Defaults to a timestamped name if not provided.
@@ -159,10 +151,10 @@ class Doc:
         """
         if not db_path or not os.path.isdir(db_path):
             raise ValueError("Invalid database path provided.")
-
+        self.db = os.path.basename(db_path)
         self.db_path = db_path
-        self.vec:Model = vec
-        self._load_doc(self.doc_name)
+        self.vec: Model = vec
+        self.load_doc(self.doc_name)
 
     def get_doc(self, doc: str) -> str:
         """
@@ -180,10 +172,10 @@ class Doc:
         if not doc:
             raise ValueError("Document name cannot be empty.")
 
-        self._load_doc(doc)
-        return self.doc_path
+        self.load_doc(doc)
+        return self.info()
 
-    def _load_doc(self, doc: str) -> None:
+    def load_doc(self, doc: str) -> None:
         """
         Loads the document and its associated data, creating necessary files if they don't exist.
 
@@ -202,8 +194,8 @@ class Doc:
         self.doc_index_path = os.path.join(self.doc_path, self.doc_name + ".index")
 
         self.load_index()
-        self.data_oxd:OxDoc = self._create_oxd("data.oxd")
-        self.vec_oxd :OxDoc= self._create_oxd("vec.oxd")
+        self.data_oxd: OxDoc = self._create_oxd("data.oxd")
+        self.vec_oxd: OxDoc = self._create_oxd("vec.oxd")
         self.doc_reg["vec_model"] = self.vec.md_name
         self.save_index()
 
@@ -243,6 +235,8 @@ class Doc:
             Dict[str, Any]: A dictionary containing information about the document.
         """
         res = {
+            "db": self.db,
+            "db_path": self.db_path,
             "doc_name": self.doc_name,
             "doc_path": self.doc_path,
             "doc_reg": self.doc_reg,
@@ -255,7 +249,7 @@ class Doc:
         embeddings: embd = True,
         description: Optional[Any] = None,
         metadata: Optional[Dict[str, Any]] = None,
-        key: Optional[str] = None,
+        uid: Optional[str] = None,
         **kwargs,
     ) -> str:
         """
@@ -266,7 +260,7 @@ class Doc:
             embeddings (embd, optional): Indicates whether to generate embeddings for the data. Defaults to True.
             description (Optional[Any], optional): A description related to the data. Defaults to None.
             metadata (Optional[Dict[str, Any]], optional): Additional metadata related to the data. Defaults to None.
-            key (Optional[str], optional): A key for the log entry. Defaults to None.
+            uid (Optional[str], optional): A uid for the log entry. Defaults to None.
 
             eg:
             metadata = {metadata_key:value}
@@ -276,19 +270,22 @@ class Doc:
         Raises:
             ValueError: If the data is empty or None.
         """
-        # Get the document name
-        doc: str = self.get_doc_name()
-        uid: str = gen_uid()
 
         # Validate input data
         if not data:
             raise ValueError("ox-db: No data provided for logging.")
 
+        data = to_json_string(data)
+        # Get the document name
+        doc: str = self.get_doc_name()
+        hid: str = gen_hid(data)
+        if hid in self.doc_index:
+            return hid
+
         # Prepare the document unit and index metadata
         doc_unit: Dict[str, Any] = {"data": data, "description": description}
         index_metadata: Dict[str, Any] = {
-            "uid": uid,
-            "key": key or "key",
+            "uid": uid or "uid",
             "doc": doc,
             "time": datetime.now().strftime("%H:%M:%S"),
             "date": datetime.now().strftime("%d-%m-%Y"),
@@ -299,37 +296,38 @@ class Doc:
             index_metadata.update(metadata)
 
         # Push the index and data to the corresponding storage
-        self.push_index(uid, index_metadata, doc + ".index")
-        self.data_oxd.set(uid, doc_unit)
+        self.push_index(hid, index_metadata)
+        self.data_oxd.set(hid, doc_unit)
 
         # Handle embeddings if required
         if embeddings:
             encoded_embeddings: Any = (
-                embeddings if not isinstance(embeddings, bool) else self.vec.encode(data)
+                embeddings
+                if not isinstance(embeddings, bool)
+                else self.vec.encode(data)
             )
-            self.vec_oxd.set(uid, encoded_embeddings)
+            self.vec_oxd.set(hid, encoded_embeddings)
 
-        return uid
-
+        return hid
 
     def pull(
         self,
-        uid: Optional[uids] = None,
-        key: Optional[str] = None,
+        hid: Optional[hids] = None,
+        uid: Optional[str] = None,
         time: Optional[str] = None,
         date: Optional[str] = None,
         docfile: Optional[str] = "data.oxd",
-        where: Optional[Dict[str, Any]] = None,
+        where: Optional[Dict[str, Any]] = {},
         where_data: Optional[Dict[str, Any]] = None,
         search_all_filter: Optional[bool] = False,
         apply_filter: Optional[bool] = True,
     ) -> List[Dict[str, Any]]:
         """
-        Retrieves log entries based on unique ID, key, time, date, or additional filter criteria.
+        Retrieves log entries based on unique ID, uid, time, date, or additional filter criteria.
 
         Args:
-            uid (Optional[uids], optional): The unique ID(s) of the log entry. Defaults to None.
-            key (Optional[str], optional): The key of the log entry. Defaults to None.
+            hid (Optional[hids], optional): The unique ID(s) of the log entry. Defaults to None.
+            uid (Optional[str], optional): The uid of the log entry. Defaults to None.
             time (Optional[str], optional): The time of the log entry. Defaults to None.
             date (Optional[str], optional): The date of the log entry. Defaults to None.
             docfile (Optional[str], optional): The specific subfile within the document to search.
@@ -358,7 +356,7 @@ class Doc:
         log_entries: Dict[str, Any] = {}
 
         # Check if all filters are None
-        all_none = all(var is None for var in [key, uid, time, date, where, where_data])
+        all_none = all(var is None for var in [uid, hid, time, date, where, where_data])
         if not apply_filter:
             all_none = True
 
@@ -367,43 +365,46 @@ class Doc:
             content = self._retrive_doc_all(docfile)
             return content
 
-        # If `uid` is provided, retrieve entries by unique ID
-        if uid is not None:
-            uids_list = strorlist_to_list(uid)
-            return self.pull_uid(uids_list, docfile, where_data)
+        # If `hid` is provided, retrieve entries by unique ID
+        hid = hid or where.get(hid)
+        if hid is not None:
+            hids_list = strorlist_to_list(hid)
+            return self.pull_hid(hids_list, docfile, where_data)
 
-        # If any other filter criteria are provided, search for matching UIDs and retrieve the corresponding entries
-        if any([key, time, date, where, where_data]):
-            uids_list = self.search_uid(
-                key, time, date, where, where_data, search_all_filter
+        # If any other filter criteria are provided, search for matching hIDs and retrieve the corresponding entries
+        if any([uid, time, date, where, where_data]):
+            hids_list = self.search_hid(
+                uid, time, date, where, where_data, search_all_filter
             )
-            log_entries = self.pull_uid(uids=uids_list, docfile=docfile,where_data=where_data)
+            log_entries = self.pull_hid(
+                hids=hids_list, docfile=docfile, where_data=where_data
+            )
             return log_entries
 
         return log_entries
 
-    def pull_uid(
+    def pull_hid(
         self,
-        uids: List[str],
+        hids: List[str],
         docfile: str,
         where_data: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        Retrieves log entries based on a list of unique IDs (`uids`) from a specified document file (`docfile`).
+        Retrieves log entries based on a list of unique IDs (`hids`) from a specified document file (`docfile`).
 
         Args:
-            uids (List[str]): A list of unique IDs representing the log entries to retrieve.
+            hids (List[str]): A list of unique IDs representing the log entries to retrieve.
             docfile (str): The specific subfile within the document to search. Must be one of ["data.oxd", "vec.oxd", ".index"].
             where_data (Optional[Dict[str, Any]], optional): Data filter criteria for the log entry, particularly used for searching within "data.oxd". Defaults to None.
 
         Returns:
-            Dict[str, Any]: A dictionary containing the log entries that match the given `uids`.
+            Dict[str, Any]: A dictionary containing the log entries that match the given `hids`.
 
         Raises:
             ValueError: If `docfile` is not a valid subfile within the document.
         """
         log_entries: Dict[str, Any] = {}
-        content: Union[Dict[str, Any] ,OxDoc]= {}
+        content: Union[Dict[str, Any], OxDoc] = {}
 
         # Validate the `docfile` argument
         if docfile not in DOCFILE_LIST:
@@ -416,29 +417,27 @@ class Doc:
             content = self.doc_index
         elif docfile == "data.oxd" and where_data:
             search_string = where_data.get("search_string")
-            if not search_string :
+            if not search_string:
                 return log_entries
             content = self.data_oxd
 
-            # Search within the data using the provided `uids` and `search_string`
-            for uidx in uids:
-                unit = content.get(uidx)
+            # Search within the data using the provided `hids` and `search_string`
+            for hidx in hids:
+                unit = content.get(hidx)
                 if unit:
                     if search_string in unit["data"]:
-                        log_entries[uidx] = unit
+                        log_entries[hidx] = unit
             return log_entries
         else:
             content = self.vec_oxd if docfile == "vec.oxd" else self.data_oxd
 
-        # Retrieve log entries using the provided `uids`
-        for uidx in uids:
-            unit = content.get(uidx)
+        # Retrieve log entries using the provided `hids`
+        for hidx in hids:
+            unit = content.get(hidx)
             if unit:
-                log_entries[uidx] = unit
+                log_entries[hidx] = unit
 
         return log_entries
-
-
 
     def search(
         self,
@@ -446,8 +445,8 @@ class Doc:
         topn: int = 10,
         log_entries: Optional[Dict[str, Dict[str, Any]]] = None,
         by: Optional[str] = "dp",
-        uid: Optional[uids] = None,
-        key: Optional[str] = None,
+        hid: Optional[hids] = None,
+        uid: Optional[str] = None,
         time: Optional[str] = None,
         date: Optional[str] = None,
         where: Optional[Dict[str, Any]] = None,
@@ -468,13 +467,13 @@ class Doc:
                 - "dp": Dot Product (default)
                 - "ed": Euclidean Distance
                 - "cs": Cosine Similarity
-            uid (Optional[uids], optional): The unique ID(s) of the log entry. Defaults to None.
-            key (Optional[str], optional): The key of the log entry. Defaults to None.
+            hid (Optional[hids], optional): The unique ID(s) of the log entry. Defaults to None.
+            uid (Optional[str], optional): The uid of the log entry. Defaults to None.
             time (Optional[str], optional): The time of the log entry. Defaults to None.
             date (Optional[str], optional): The date of the log entry. Defaults to None.
             where (Optional[Dict[str, Any]], optional): Additional metadata filter criteria for the log entry. Defaults to None.
             where_data (Optional[Dict[str, Any]], optional): Data filter criteria, such as a specific search string within the log entries. Defaults to None.
-            includes (Optional[List[str]], optional): Fields to include in the search results. Defaults to ["uid", "data", "description"].
+            includes (Optional[List[str]], optional): Fields to include in the search results. Defaults to ["hid", "data", "description"].
             search_all_filter (Optional[bool], optional): Whether to apply all filters across all entries. Defaults to False.
             apply_filter_last (Optional[bool], optional): Whether to apply filters after vector search. Defaults to False.
             where_data_before_vec_search (Optional[bool], optional): Whether to apply `where_data` filter before performing vector search. Defaults to False.
@@ -487,17 +486,19 @@ class Doc:
         """
         # Initialize the includes list if it's None
         if includes is None:
-            includes = ["uid", "data", "description"]
+            includes = ["hid", "data", "description"]
 
         # Validate the search method
         valid_search_methods = ["dp", "ed", "cs"]
         if by not in valid_search_methods:
-            raise ValueError(f"Invalid search method '{by}'. Must be one of {valid_search_methods}.")
+            raise ValueError(
+                f"Invalid search method '{by}'. Must be one of {valid_search_methods}."
+            )
 
         # Prepare the search query for pulling entries
         search_query = {
+            "hid": hid,
             "uid": uid,
-            "key": key,
             "time": time,
             "date": date,
             "docfile": "vec.oxd",
@@ -513,14 +514,14 @@ class Doc:
 
         # Pull vector log entries for the search
         vec_log_entries = log_entries or self.pull(**search_query)
-        dataset_uids = list(vec_log_entries.keys())
+        dataset_hids = list(vec_log_entries.keys())
         dataset = list(vec_log_entries.values())
 
         # Perform the search on the vector data
         search_scores = self.vec.search(query, dataset, by=by)
         search_res = {
             "entries": 0,
-            "uid": [],
+            "hid": [],
             "data": [],
             "description": [],
             "sim_score": [],
@@ -532,40 +533,45 @@ class Doc:
         if len(search_scores["idx"]) == 0:
             return search_res
 
-        # Retrieve the top matching UIDs
-        top_uids = [dataset_uids[idx] for idx in search_scores["idx"][:topn]]
+        # Retrieve the top matching hIDs
+        top_hids = [dataset_hids[idx] for idx in search_scores["idx"][:topn]]
 
         # Apply additional filters if specified
         if apply_filter_last:
-            search_query["uid"] = top_uids
+            search_query["hid"] = top_hids
             search_query["apply_filter"] = True
             search_query["docfile"] = "data.oxd"
             search_query["where_data"] = where_data
             res_data = self.pull(**search_query)
         else:
-            res_data = self.pull_uid(uids=top_uids, docfile="data.oxd", where_data=where_data)
+            res_data = self.pull_hid(
+                hids=top_hids, docfile="data.oxd", where_data=where_data
+            )
 
-        res_uids = list(res_data.keys())
-        res_len = len(res_uids)
+        res_hids = list(res_data.keys())
+        res_len = len(res_hids)
         search_res["entries"] = res_len
-        search_res["uid"] = res_uids
+        search_res["hid"] = res_hids
 
         # Populate the search results with data, descriptions, and other requested fields
-        for uidx in res_uids:
-            search_res["data"].append(res_data[uidx]["data"])
-            search_res["description"].append(res_data[uidx]["description"])
-            search_res["sim_score"].append(search_scores["sim_score"][search_scores["idx"].index(dataset_uids.index(uidx))])
-            search_res["index"].append(self.doc_index.get(uidx))
+        for hidx in res_hids:
+            search_res["data"].append(res_data[hidx]["data"])
+            search_res["description"].append(res_data[hidx]["description"])
+            search_res["sim_score"].append(
+                search_scores["sim_score"][
+                    search_scores["idx"].index(dataset_hids.index(hidx))
+                ]
+            )
+            search_res["index"].append(self.doc_index.get(hidx))
             if "embeddings" in includes:
-                search_res["embeddings"].append(vec_log_entries[uidx])
+                search_res["embeddings"].append(vec_log_entries[hidx])
 
         return search_res
 
-
     def show(
         self,
-        key: Optional[str] = None,
         uid: Optional[str] = None,
+        hid: Optional[str] = None,
         time: Optional[str] = None,
         doc: Optional[str] = None,
         date: Optional[str] = None,
@@ -574,8 +580,8 @@ class Doc:
         Placeholder method to show specific log entries based on provided criteria.
 
         Args:
-            key (Optional[str], optional): The key of the log entry. Defaults to None.
-            uid (Optional[str], optional): The unique ID of the log entry. Defaults to None.
+            uid (Optional[str], optional): The uid of the log entry. Defaults to None.
+            hid (Optional[str], optional): The unique ID of the log entry. Defaults to None.
             time (Optional[str], optional): The time of the log entry. Defaults to None.
             doc (Optional[str], optional): The document name to retrieve from. Defaults to None.
             date (Optional[str], optional): The date of the log entry. Defaults to None.
@@ -640,12 +646,12 @@ class Doc:
             with open(log_file_path, mode) as file:
                 write_file(file, content)
 
-    def push_index(self, uid: str, index_unit: Any, log_file: str) -> None:
+    def push_index(self, hid: str, index_unit: Any) -> None:
         """
         Pushes an index entry to the index file.
 
         Args:
-            uid (str): The unique ID for the log entry.
+            hid (str): The unique ID for the log entry.
             index_unit (Any): The index data to be logged.
             log_file (str): The log file name to save the index.
 
@@ -654,13 +660,13 @@ class Doc:
         """
         if not index_unit:
             raise ValueError("ox-db: No data provided for logging")
-        self.doc_index[uid] = index_unit
+        self.doc_index[hid] = index_unit
         self.doc_reg["entry"] += 1
         self.save_index()
 
     def _retrive_doc_all(self, docfile: str) -> Dict[str, Any]:
         """
-        Retrieves all the content key-value pairs from a specified document file.
+        Retrieves all the content indexkey-value pairs from a specified document file.
 
         Args:
             docfile (str): The specific file within the document, e.g., ["data.oxd", "vec.oxd", ".index"].
@@ -679,13 +685,14 @@ class Doc:
         elif docfile == "data.oxd":
             content = self.data_oxd.load_data()
         else:
-            raise ValueError(f"ox-db: Unknown document file '{docfile}' docfile should be {DOCFILE_LIST}")
+            raise ValueError(
+                f"ox-db: Unknown document file '{docfile}' docfile should be {DOCFILE_LIST}"
+            )
         return content
 
-
-    def search_uid(
+    def search_hid(
         self,
-        key: Optional[str] = None,
+        uid: Optional[str] = None,
         time: Optional[str] = None,
         date: Optional[str] = None,
         where: Optional[Dict[str, Any]] = None,
@@ -694,10 +701,10 @@ class Doc:
         **kwargs,
     ) -> List[str]:
         """
-        Searches for UIDs based on key, time, date, or additional filtering criteria.
+        Searches for hIDs based on uid, time, date, or additional filtering criteria.
 
         Args:
-            key (Optional[str], optional): The key to search. Defaults to None.
+            uid (Optional[str], optional): The uid to search. Defaults to None.
             time (Optional[str], optional): The time to search. Defaults to None.
             date (Optional[str], optional): The date to search. Defaults to None.
             where (Optional[Dict[str, Any]], optional): Additional metadata filters, e.g., {"metadata_key": "value"}.
@@ -705,57 +712,63 @@ class Doc:
             search_all_filter (bool, optional): If True, requires all filters to match. Defaults to False.
 
         Returns:
-            List[str]: The list of matching UIDs.
+            List[str]: The list of matching hIDs.
         """
         where = where or {}
 
-        iskey = key or where.get("key")
+        iskey = uid or where.get("uid")
         istime = time or where.get("time")
         isdate = date or where.get("date")
 
         if iskey:
-            where["key"] = iskey
+            where["uid"] = iskey
         if istime:
             where["time"] = istime
         if isdate:
             where["date"] = isdate
 
         content = self.doc_index
-        uids = []
+        hids = []
 
-        for uid, index_metadata in content.items():
+        for hid, index_metadata in content.items():
             log_it = self._metadata_filter(where, index_metadata, search_all_filter)
             if log_it:
-                uids.append(uid)
+                hids.append(hid)
 
-        return uids
+        return hids
 
     @staticmethod
-    def search_data(search_string: str, doc_data_dict: Dict[str, Dict[str, str]]) -> List[str]:
+    def search_data(
+        search_string: str, doc_data_dict: Dict[str, Dict[str, str]]
+    ) -> List[str]:
         """
         Searches through the document data for a specific string.
 
         Args:
             search_string (str): The string to search for within the data.
-            doc_data_dict (Dict[str, Dict[str, str]]): The dictionary containing UIDs and their corresponding data.
+            doc_data_dict (Dict[str, Dict[str, str]]): The dictionary containing hIDs and their corresponding data.
 
         Returns:
-            List[str]: The UIDs where the search string was found.
+            List[str]: The hIDs where the search string was found.
         """
-        uids = []
-        for uid, doc_data in doc_data_dict.items():
+        hids = []
+        for hid, doc_data in doc_data_dict.items():
             if search_string in doc_data.get("data", ""):
-                uids.append(uid)
+                hids.append(hid)
 
-        return uids
+        return hids
 
     @staticmethod
-    def _metadata_filter(query_dict: Dict[str, Any], data_dict: Dict[str, Any], search_all_filter: bool = False) -> bool:
+    def _metadata_filter(
+        query_dict: Dict[str, Any],
+        data_dict: Dict[str, Any],
+        search_all_filter: bool = False,
+    ) -> bool:
         """
-        Checks if at least one key-value pair from the query_dict matches the data_dict.
+        Checks if at least one metakey-value pair from the query_dict matches the data_dict.
 
         Args:
-            query_dict (Dict[str, Any]): The key-value pairs to match.
+            query_dict (Dict[str, Any]): The metakey-value pairs to match.
             data_dict (Dict[str, Any]): The data to be checked against.
             search_all_filter (bool, optional): If True, all filters must match. Defaults to False.
 
@@ -764,32 +777,30 @@ class Doc:
         """
         if data_dict is None:
             return False
-        partial_filters = ["time","date"]
+        partial_filters = ["time", "date"]
         if not search_all_filter:
-            for key in query_dict.keys():
-                qvalue = query_dict.get(key)
-                dvalue = data_dict.get(key)
+            for metakey in query_dict.keys():
+                qvalue = query_dict.get(metakey)
+                dvalue = data_dict.get(metakey)
 
                 if dvalue is None:
                     return False
-                elif (key in partial_filters) and (qvalue in dvalue):
+                elif (metakey in partial_filters) and (qvalue in dvalue):
                     return True
-                elif query_dict[key] == dvalue:
+                elif query_dict[metakey] == dvalue:
                     return True
             return False
         else:
-            
-            for key in query_dict.keys():
-                qvalue = query_dict.get(key)
-                dvalue = data_dict.get(key)
-                
+
+            for metakey in query_dict.keys():
+                qvalue = query_dict.get(metakey)
+                dvalue = data_dict.get(metakey)
+
                 if dvalue is None:
                     return False
-                
-                elif (key in partial_filters) and (qvalue in dvalue):
+
+                elif (metakey in partial_filters) and (qvalue in dvalue):
                     continue
-                elif query_dict[key] != dvalue:
+                elif query_dict[metakey] != dvalue:
                     return False
             return True
-
-

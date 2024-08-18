@@ -1,162 +1,160 @@
-from ox_db.db.log import Oxdb, embd
-from ox_db.db.types import PullModel, PushModel, SearchModel
-
-db = Oxdb("hosted")
-doc = db.get_doc()
-
 """
-shell commands
-
-db get "dbname"
-doc get "docname"
-push "data"
-pull key="" time=""
-search "" key="" time=""
+OxdbShell
 
 """
 
+from pprint import pprint
+import sys
+from typing import Any
 
-def cmd_translate(command):
-    result = {}
+from ox_db.db.log import Oxdb
 
-    # Split command into parts
-    parts = command.split()
+COMMAND_MAPPING = {
+    "oxdb.info": "oxdb.info()",
+    "info": "oxdb.info()",
+    "oxdb.doc.info": "oxdb.doc.info()",
+    "doc.info": "oxdb.doc.info()",
+    "doc info": "oxdb.doc.info()",
+    'oxdb.get("': "oxdb.get_db({})",
+    'oxdb get "': "oxdb.get_db({})",
+    'oxdb get("': "oxdb.get_db({})",
+    'get("': "oxdb.get_db({})",
+    'get "': "oxdb.get_db({})",
+    'oxdb.doc.get("': "oxdb.doc.get_doc({})",
+    'oxdb doc get "': "oxdb.doc.get_doc({})",
+    'oxdb doc get("': "oxdb.doc.get_doc({})",
+    'doc.get("': "oxdb.doc.get_doc({})",
+    'doc get "': "oxdb.doc.get_doc({})",
+    "oxdb.doc.push(": "oxdb.doc.push({})",
+    "doc.push(": "oxdb.doc.push({})",
+    "doc push(": "oxdb.doc.push({})",
+    "push(": "oxdb.doc.push({})",
+    "push ": "oxdb.doc.push({})",
+    "oxdb.doc.pull(": "oxdb.doc.pull({})",
+    "doc.pull(": "oxdb.doc.pull({})",
+    "doc pull(": "oxdb.doc.pull({})",
+    "pull(": "oxdb.doc.pull({})",
+    "oxdb.doc.search(": "oxdb.doc.search({})",
+    "doc.search(": "oxdb.doc.search({})",
+    "doc search(": "oxdb.doc.search({})",
+    "search(": "oxdb.doc.search({})",
+    "search ": "oxdb.doc.search({})",
+}
 
-    # Command and first argument
-    result["cmd"] = [parts[0]]
-    if result["cmd"]==["ox"]:
-        result["code"]=command.split("ox ")[1]
-        return  result
 
-    # Handle the second part if it's part of the command (like 'use' in 'db use')
-    if len(parts) > 1 and "=" not in parts[1] and not parts[1].startswith('"'):
-        result["cmd"].append(parts[1])
-        parts = parts[2:]  # Remove command and its first argument
-    else:
-        parts = parts[1:]  # Remove just the command
+class OxdbShell:
+    def __init__(self, oxdb):
+        self.oxdb = oxdb
 
-    # Handle the remaining parts
-    current_key = None
-    for part in parts:
-        if "=" in part:
-            key, value = part.split("=", 1)
-            result[key] = value.strip('"')
-        elif part.startswith('"') and part.endswith('"'):
-            result["data"] = part.strip('"')
-        else:
-            if current_key:
-                result[current_key] += " " + part.strip('"')
+    @staticmethod
+    def validate_command(shell_command: str):
+        for key in COMMAND_MAPPING.keys():
+            if shell_command.startswith(key):
+                return True
+        return False
+
+    @staticmethod
+    def translate_command(shell_command: str):
+        for key, value in COMMAND_MAPPING.items():
+            if shell_command.startswith(key):
+                translated_command = value
+
+                if "{}" not in value:
+                    return value
+                # Handle arguments in quotes for methods like get, push, pull, and search
+                if (
+                    not "(" in shell_command
+                    and '"' in shell_command
+                    and '"' in shell_command
+                    and "{}" in value
+                ):
+                    arg_start = shell_command.find('"')
+                    arg_end = shell_command.rfind('"') + 1
+                    if arg_start != -1 and arg_end != -1:
+                        args = shell_command[arg_start:arg_end]
+                        translated_command = value.replace("{}", args)
+
+                    print(1, translated_command)
+                    return translated_command
+
+                # Handle dictionary-style arguments for push, pull, search
+                if (
+                    "{}" not in shell_command
+                    and "(" in shell_command
+                    and ")" in shell_command
+                    and "{}" in value
+                ):
+                    args = shell_command[
+                        shell_command.find("(") + 1 : shell_command.rfind(")")
+                    ]
+
+                    args_string = f"{args}"
+
+                    translated_command = value.replace("{}", args_string)
+
+                    print(2, translated_command)
+
+                    return translated_command
+                    # Handle dictionary-style arguments for push, pull, search
+                if (
+                    "{}" in shell_command
+                    and "(" in shell_command
+                    and ")" in shell_command
+                    and "{}" in value
+                ):
+                    args = shell_command[
+                        shell_command.find("(") + 1 : shell_command.rfind(")")
+                    ]
+                    args_string = args
+                    if "**" != args[:2]:
+                        args_string = "**{" + args + "}"
+
+                    translated_command = value.replace("{}", args_string)
+
+                    print(2, translated_command)
+
+                    return translated_command
+
+        return shell_command
+
+    def run(self, shell_commands: str):
+        final_res: Any = None
+        commands = shell_commands.split(",")
+        for command in commands:
+            command = command.strip()
+            if self.validate_command(command):
+                translated_command = self.translate_command(command)
+                try:
+                    final_res = eval(f"self.{translated_command}")
+                    print("oxdb : ")
+                    pprint(final_res)
+
+                except Exception as e:
+                    print("oxdb : ")
+                    print(f"db req  : [{translated_command}] failed")
+                    print(f"error   : {e}")
+
             else:
-                current_key = "data"
-                result[current_key] = part.strip('"')
-
-    return result
-
-CMD_FUNCTION_LIST = ["ox" ,"db","doc","push","pull","search"]
-
-def run(script):
-    cmd_dict = cmd_translate(script)
-
-    cmd = cmd_dict["cmd"][0]
-    res = "no response : " + str(cmd_dict )
-    if cmd in CMD_FUNCTION_LIST:
-        try:
-            res = eval(f"{cmd}({cmd_dict})")
-        except NameError:
-            print(f"Function '{cmd}' not found.")
-        except Exception as e:
-            print(f"An error occurred: {e}")
-
-    return res
-
-def start():
-    while True:
-        cmd =str(input("ox-db> "))
-        run(cmd)
-
-def ox(cmd_dict):
-    code = cmd_dict["code"]
-    res = "no output"
-    try:
-        res = eval(code)
-    except Exception as e:
-        print(f"give code not valid : {code} \n exception : {e}")
-
-    print(res)
-    return res
-
-def get():
-    res = db.info()
-    return res
+                print("oxdb : ")
+                print(f"db req      : [{command}] failed Invalid command")
 
 
-def get_db():
-    res = db.info()
-    return res
+def main():
+    oxdb = Oxdb("hosted")  # Replace with actual Oxdb initialization
+    oxdb_shell = OxdbShell(oxdb)
+
+    if len(sys.argv) > 1:
+        shell_commands = " ".join(sys.argv[1:])
+        oxdb_shell.run(shell_commands)
+    else:
+        while True:
+            try:
+                shell_commands = input("oxdb> ")
+                oxdb_shell.run(shell_commands)
+            except (KeyboardInterrupt, EOFError):
+                print("\nExiting shell...")
+                break
 
 
-def set_db(db_name: str):
-    db.set_db(db_name)
-    res = db.info()
-    return res
-
-
-def get_doc(doc_name: str):
-    global doc
-    doc = db.get_doc(doc_name)
-    res = db.info()
-    return res
-
-
-def get_doc():
-    return doc.info()
-
-
-def get_doc_name():
-    return db.doc.doc_name
-
-
-def get_doc_reg():
-    return doc.doc_reg
-
-
-def push(data: PushModel):
-
-    result = doc.push(
-        data.data, data.embeddings, data.description, data.metadata, data.key
-    )
-
-    return result
-
-
-def pull(data: PullModel):
-
-    result = doc.pull(
-        data.uid,
-        data.key,
-        data.time,
-        data.date,
-        data.docfile,
-        data.where,
-        data.where_data,
-    )
-
-    return result
-
-
-
-def search(data: SearchModel):
-    result = doc.search(
-            data.query,
-            data.topn,
-            data.log_entries,
-            data.by,
-            data.uid,
-            data.key,
-            data.date,
-            data.where,
-            data.where_data,
-        )
-   
-    return result
-
+if __name__ == "__main__":
+    main()

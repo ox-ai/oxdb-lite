@@ -2,7 +2,7 @@
 
 ## about :
 
-**ox-db** is an open-source vector database specifically designed for storing and retrieving vector embeddings and also build rag system for ai assistent knowledge database storage
+**ox-db** is an open-source On-Premises vector database specifically designed for storing and retrieving vector embeddings and also build rag system for ai assistent knowledge database storage
 
 ## Installation:
 
@@ -39,28 +39,73 @@ pip install ox-db
 ```py
 from ox_db.db.log import Oxdb
 
-db=Oxdb("kn-base")
+# init disk persisted vectore database
+db=Oxdb("noteDB")
+
+# create a doc which holds all reverlent data together
 log = db.get_doc("note-doc")
 
+# can push data by single line cmd
 log.push("data-1")
-log.push("need to complete work",key="note")
+# can add uid or uuids and additional metadata
+log.push(data="need to implement pdfsearch db",uid="",metadata={"note-type" :"project-note"})
+# support different data types
+log.push(data ={"datas":["project-queue","priority is db" ]})
 
-log.pull(time="05")
+# can retrive data by metadata filters or string search
+log.pull(uid="projects")
+
+
+# can also apply metadata filers, search string, and all other query methods methods
 log.search("data",2)
 
+# # here comes the main plot do vector search in different methods
+# by (Optional[str], optional): The search method. Defaults to "dp".
+#                 - "dp": Dot Product (default)
+#                 - "ed": Euclidean Distance
+#                 - "cs": Cosine Similarity
+log.search(query="data",topn=2,by="ed",where={"source":"ox-ai"},where_data={"search_string":"super data processor"})
 ```
 
-### ox-db.api
+### ox-db shell
 
-to start vector db (ox-db) api run below commend refer [docs.api.log](./docs/api.log.md)
+to start ox-db shell run below cmd refere [shell.log.md](./docs/shell.log.md) for further detials
 
+```bash
+oxdb.shell
 ```
-uvicorn ox_db.api.log:app
+
+```bash
+oxdb.shell -- "shell command"
+```
+
+```bash
+python -m ox_db.shell.log
+```
+
+### ox-db server
+
+to start ox-db server run below commend refer [docs.api.log](./docs/api.log.md)
+
+```bash
+oxdb.server --apikey "ox-db-prime"
+```
+
+```bash
+python -m ox_db.server.log --apikey "hi0x"
+```
+
+```bash
+uvicorn ox_db.server.log:app
 ```
 
 ## docs :
 
-- [docs.md](./docs/docs.md) will be released after major release
+- [docs.md](./docs/docs.md) will be released soon
+
+## perfomance profiling :
+
+> will update soon
 
 ## lib implementation :
 
@@ -84,17 +129,16 @@ uvicorn ox_db.api.log:app
 │   ├── __init__.py
 │   ├── transfomer.py
 │   └── vector.py
-├── api
-│   ├── __init__.py
-│   └── log.py
 ├── db
 │   ├── __init__.py
 │   ├── log.py
 │   └── types.py
+├── server
+│   ├── __init__.py
+│   └── log.py
 ├── settings.py
 ├── shell
-│   ├── log.py
-│   └── log_api.py
+│   └── log.py
 └── utils
     └── dp.py
 ```

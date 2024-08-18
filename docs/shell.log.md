@@ -1,5 +1,5 @@
 
-# ox_db
+# ox_db shell
 
 
 ## base cmd :
