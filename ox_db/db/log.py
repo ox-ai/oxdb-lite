@@ -19,11 +19,11 @@ from ox_db.utils.dp import (
 )
 
 dbDoc = ForwardRef("dbDoc")
-vec_model = Model()
+Default_vec_model = Model()
 
 
 class Oxdb:
-    def __init__(self, db: str = "", db_path: Optional[str] = None):
+    def __init__(self, db: str = "", db_path: Optional[str] = None,vec_model:Model = None):
         """
         Initializes an instance of the Oxdb class.
 
@@ -32,7 +32,7 @@ class Oxdb:
             db_path (Optional[str], optional): The path to the database directory. Defaults to None.
         """
         self.db: str = db
-        self.vec: Model = vec_model
+        self.vec: Model = vec_model or Default_vec_model
         self.doc: Optional[dbDoc] = None
         self.doc_list: List[str] = []
 
@@ -317,7 +317,7 @@ class dbDoc:
         time: Optional[str] = None,
         date: Optional[str] = None,
         docfile: Optional[str] = "data.oxd",
-        where: Optional[Dict[str, Any]] = {},
+        where: Optional[Dict[str, Any]] = None,
         where_data: Optional[Dict[str, Any]] = None,
         search_all_filter: Optional[bool] = False,
         apply_filter: Optional[bool] = True,
@@ -362,10 +362,11 @@ class dbDoc:
 
         # If no filters are applied, retrieve all entries from the specified docfile
         if all_none:
-            content = self._retrive_doc_all(docfile)
-            return content
+            log_entries = self._retrive_doc_all(docfile)
+            return log_entries
 
         # If `hid` is provided, retrieve entries by unique ID
+        where = where or {}
         hid = hid or where.get(hid)
         if hid is not None:
             hids_list = strorlist_to_list(hid)

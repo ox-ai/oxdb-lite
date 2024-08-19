@@ -10,13 +10,16 @@ setup(
     url="https://github.com/ox-ai/ox-db.git",
     license="MIT",
     packages=find_packages(),
-    package_data={"": ["requirements.txt", "README.md"]},
     install_requires=open("requirements.txt").readlines(),
     entry_points={
         "console_scripts": [
-            "oxdb.shell=ox_db.shell.log:main", 
-            "oxdb.server=ox_db.server.log:main", 
+            "oxdb.shell=ox_db.shell.log:main",
+            "oxdb.server=ox_db.server.log:main",
         ],
+    },
+    package_data={
+        # 'ox_db.server': ['assets/*.html', 'assets/*.svg'],
+        "": ["requirements.txt", "README.md"]
     },
     include_package_data=True,
     python_requires=">=3.6",

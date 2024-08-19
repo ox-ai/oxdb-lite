@@ -34,7 +34,62 @@ pip install ox-db
 
 - refere [test.log.ipynb](./test.log.ipynb.ipynb) and [docs.db.log](./docs/db.log.md) for understanding the underlying usage
 
-### code snippet :
+## db access interfases :
+
+- [shell mode](#ox-db-shell)
+- [db core mode](#ox-db-core)
+- [db client-server mode](#ox-db-server)
+
+
+## ox-db shell 
+
+### > shell session :
+
+- initiate a shell session in terminall for quick access
+
+<pre>                                                                                                           
+<font color="#5EBDAB">┌──(</font><font color="#277FFF"><b>lokesh㉿kali</b></font><font color="#5EBDAB">)-[</font><b>~</b><font color="#5EBDAB">]</font>
+<font color="#5EBDAB">└─</font><font color="#277FFF"><b>$</b></font> <font color="#49AEE6">oxdb.shell</font>                                     
+oxdb&gt; search &quot;implementation plan&quot;
+oxdb : 
+{&apos;data&apos;: [&apos;data-1&apos;,
+          &apos;need to implement pdfsearch db with ui&apos;,
+          &apos;{&quot;datas&quot;: [&quot;project-queue&quot;, &quot;priority is db&quot;]}&apos;]}
+</pre>
+
+to start ox-db shell run below cmd refere [shell.log.md](./docs/shell.log.md) for further detials
+
+### Linux , macos and Windows
+
+- cmd to initiate terminal session which can intract directly to ox-db
+
+```bash
+oxdb.shell
+```
+
+- on terminal access : to send db query to server with out starting a session
+- through terminal start the server then execute `oxdb.shell "oxdb query"`
+- refere [ox-db server](#ox-db-server) to start server
+
+```bash
+oxdb.shell "oxdb query"
+```
+
+- if path not correctly assigned due too sudo or admin access use below cmd
+
+```bash
+python -m ox_db.shell.log
+```
+
+## ox-db core
+
+### db core interfase :
+
+- to directly work with ox-db use code `Oxdb form ox_db.db.log`
+- direct access gives lot of low level api access for inspecting the db
+- refere [db.log](./docs/db.log.md)
+
+## code snippet :
 
 ```py
 from ox_db.db.log import Oxdb
@@ -48,7 +103,7 @@ log = db.get_doc("note-doc")
 # can push data by single line cmd
 log.push("data-1")
 # can add uid or uuids and additional metadata
-log.push(data="need to implement pdfsearch db",uid="",metadata={"note-type" :"project-note"})
+log.push(data="need to implement pdfsearch db",uid="",metadata={"note-type" :"project-note","org":"ox-ai"})
 # support different data types
 log.push(data ={"datas":["project-queue","priority is db" ]})
 
@@ -64,45 +119,54 @@ log.search("data",2)
 #                 - "dp": Dot Product (default)
 #                 - "ed": Euclidean Distance
 #                 - "cs": Cosine Similarity
-log.search(query="data",topn=2,by="ed",where={"source":"ox-ai"},where_data={"search_string":"super data processor"})
+log.search(query="data",topn=2,by="ed",where={"org":"ox-ai"},where_data={"search_string":"super data processor"})
 ```
 
-### ox-db shell
+```py
+# output
+{'entries': 2,
+ 'data': ['need to implement pdfsearch db',
+          'need to implement pdfsearch db with ui'],
+ 'entries': 2,
+ 'sim_score': [1.343401897402224, 1.3484805614337063]}
 
-to start ox-db shell run below cmd refere [shell.log.md](./docs/shell.log.md) for further detials
+```
+
+
+## ox-db server
+
+### access with client-server mode :
+
+- in clien server mode need to start the server with command
 
 ```bash
-oxdb.shell
+oxdb.server --apikey "your-api-key" --host
 ```
 
-```bash
-oxdb.shell "shell command"
-```
+- can use python client binding high level interfase code which is same as core db access refere [client.log](./docs/client.log.md)
+- java script api coming soon u can directly acces using spi
 
-```bash
-python -m ox_db.shell.log
-```
+- to start ox-db server run below commend refer [server.log.md](./docs/server.log.md)
 
-### ox-db server
+### Linux , macos and Windows
 
-to start ox-db server run below commend refer [server.log.md](./docs/server.log.md)
+- set path in terminal
 
 ```bash
 #default apikey = "ox-db-prime"
 export OXDB_API_KEY="test-apikey"
-echo $OXDB_API_KEY  
+echo $OXDB_API_KEY
 
-```
-```bash
-oxdb.server --apikey "ox-db-prime" --host
 ```
 
 ```bash
-python -m ox_db.server.log --apikey "hi0x" --host
+oxdb.server --apikey "hi0x" --host --port 8008
 ```
 
+- if path not correctly assigned due too sudo or admin access use below cmd
+
 ```bash
-uvicorn ox_db.server.log:app
+python -m ox_db.server.log --apikey "hi0x" --host --port 8008
 ```
 
 ## docs :

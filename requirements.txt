@@ -2,6 +2,7 @@ fastapi
 numpy
 pydantic
 pymongo
+Requests
 sentence_transformers
 setuptools
 transformers
