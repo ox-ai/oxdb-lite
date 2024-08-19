@@ -12,7 +12,7 @@ always build from source for latest and bug free version
 
 ### pre requisite
 
-- core ox-db data management and documents handelling storage retrieval serialization are done using **[ox-doc](https://github.com/ox-ai/ox-doc.git)**
+- ox-db is build on top of **[ox-doc](https://github.com/ox-ai/ox-doc.git)** core ox-db data management and documents handelling storage retrieval serialization presistance are all done using **[ox-doc](https://github.com/ox-ai/ox-doc.git)**
 
 ```
 pip install git+https://github.com/ox-ai/ox-doc.git
