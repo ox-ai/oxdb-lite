@@ -3,11 +3,11 @@
 """
 
 import os
-import bson
 from datetime import datetime
 from typing import Dict, ForwardRef, Union, List, Optional, Any
 
 from ox_doc.ld import OxDoc
+from ox_doc.data_process import Chunk
 
 from ox_db.db.types import embd, hids, DOCFILE_LIST
 from ox_db.ai.vector import Model
@@ -20,7 +20,7 @@ from ox_db.utils.dp import (
 
 dbDoc = ForwardRef("dbDoc")
 Default_vec_model = Model()
-
+chunk = Chunk()
 
 class Oxdb:
     def __init__(self, db: str = "", db_path: Optional[str] = None,vec_model:Model = None):
@@ -242,73 +242,114 @@ class dbDoc:
             "doc_reg": self.doc_reg,
         }
         return res
-
+    
     def push(
         self,
-        data: Any,
-        embeddings: embd = True,
-        description: Optional[Any] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        uid: Optional[str] = None,
+        data: Optional[Union[List[str], str]] = None,
+        datax: Optional[Any] = None,
+        embeddings: Optional[Union[bool, list[list[int]]]] = True,
+        description: Optional[Union[str, list[str]]] = None,
+        metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
+        uid: Optional[Union[str, list[str]]] = None,
         **kwargs,
-    ) -> str:
+    ) -> list[str]:
         """
-        Pushes data to the log file. Generates a unique ID for each log entry.
+        Pushes data to the log file, generating a unique ID for each log entry.
+        Supports batch processing of data entries.
 
         Args:
-            data (Any): The data to be logged. Must not be empty or None.
-            embeddings (embd, optional): Indicates whether to generate embeddings for the data. Defaults to True.
-            description (Optional[Any], optional): A description related to the data. Defaults to None.
-            metadata (Optional[Dict[str, Any]], optional): Additional metadata related to the data. Defaults to None.
-            uid (Optional[str], optional): A uid for the log entry. Defaults to None.
+            data (Optional[Union[List[str], str]], optional): The data to be logged. Must not be empty or None.
+            datax (Optional[Any], optional): Additional data that can be converted to a string and logged. Defaults to None.
+            embeddings (Optional[Union[bool, List[List[int]]]], optional): If True, embeddings are generated for the data.
+                If a list of embeddings is provided, they will be used instead. Defaults to True.
+            description (Optional[Union[str, List[str]]], optional): A description related to the data. Defaults to None.
+            metadata (Optional[Union[Dict[str, Any], List[Dict[str, Any]]]], optional): Additional metadata related to the data.
+                Defaults to None.
+            uid (Optional[Union[str, List[str]]], optional): A unique ID for each log entry. Defaults to None.
 
-            eg:
-            metadata = {metadata_key:value}
         Returns:
-            str: The unique ID of the log entry.
+            list[str]: A list of unique IDs for the log entries.
 
         Raises:
-            ValueError: If the data is empty or None.
+            ValueError: If the `data` argument is empty or None.
         """
 
-        # Validate input data
-        if not data:
-            raise ValueError("ox-db: No data provided for logging.")
+        # Validation to ensure only one of `data` or `datax` is provided and neither is empty.
+        if (data is None and datax is None) or (data is not None and datax is not None):
+            raise ValueError("Either `data` or `datax` must be provided, but not both.")
 
-        data = to_json_string(data)
-        # Get the document name
-        doc: str = self.get_doc_name()
-        hid: str = gen_hid(data)
-        if hid in self.doc_index:
-            return hid
+        # Convert datax to a JSON string if provided
+        datax = [to_json_string(datax)] if datax else None
 
-        # Prepare the document unit and index metadata
-        doc_unit: Dict[str, Any] = {"data": data, "description": description}
-        index_metadata: Dict[str, Any] = {
-            "uid": uid or "uid",
-            "doc": doc,
-            "time": datetime.now().strftime("%H:%M:%S"),
-            "date": datetime.now().strftime("%d-%m-%Y"),
-        }
+        # Ensure all inputs are lists to facilitate batch processing
+        data_list = datax or (data if isinstance(data, list) else [data])
+        data_len = len(data_list)
 
-        # Update index metadata with any additional metadata provided
-        if metadata:
-            index_metadata.update(metadata)
-
-        # Push the index and data to the corresponding storage
-        self.push_index(hid, index_metadata)
-        self.data_oxd.set(hid, doc_unit)
+        description_list = (
+            description if isinstance(description, list) else [description] * data_len
+        )
+        uid_list = uid if isinstance(uid, list) else [uid] * data_len
+        metadata_list = (
+            metadata if isinstance(metadata, list) else [metadata] * data_len
+        )
 
         # Handle embeddings if required
-        if embeddings:
-            encoded_embeddings: Any = (
-                embeddings
-                if not isinstance(embeddings, bool)
-                else self.vec.encode(data)
-            )
-            self.vec_oxd.set(hid, encoded_embeddings)
+        if embeddings is True:
+            embedding_list: list[list[int]] = self.vec.generate(data_list)
+        elif isinstance(embeddings, list):
+            embedding_list = embeddings
+        else:
+            embedding_list = [[]] * data_len
 
-        return hid
+        # Ensure all lists are the same length
+        description_list = description_list + [None] * (data_len - len(description_list))
+        uid_list = uid_list + [None] * (data_len - len(uid_list))
+        metadata_list = metadata_list + [None] * (data_len - len(metadata_list))
+        embedding_list = embedding_list + [[]] * (data_len - len(embedding_list))
+
+        oxd_embedding_dict = {}
+        oxd_data_dict = {}
+        hid_list = []
+
+        # Get the document name
+        doc: str = self.get_doc_name()
+
+        for i in range(data_len):
+            hid: str = gen_hid(data_list[i])
+            if hid in self.doc_index:
+                hid_list.append(hid)
+                continue
+
+            # Prepare the document unit and index metadata
+            doc_unit: Dict[str, Any] = {
+                "data": data_list[i],
+                "description": description_list[i],
+            }
+            index_metadata: Dict[str, Any] = {
+                "uid": uid_list[i] or "uid",
+                "doc": doc,
+                "time": datetime.now().strftime("%H:%M:%S"),
+                "date": datetime.now().strftime("%d-%m-%Y"),
+            }
+
+            oxd_embedding_dict[hid] = embedding_list[i]
+            oxd_data_dict[hid] = doc_unit
+
+            # Update index metadata with any additional metadata provided
+            if metadata_list[i]:
+                index_metadata.update(metadata_list[i])
+
+            # Push the index and data to the corresponding storage
+            self.push_index(hid, index_metadata)
+            hid_list.append(hid)
+
+        # Add the data and embeddings to the storage
+        self.data_oxd.add(oxd_data_dict)
+        self.vec_oxd.add(oxd_embedding_dict)
+        self.save_index()
+
+        return hid_list
+
 
     def pull(
         self,
@@ -612,7 +653,7 @@ class dbDoc:
             with open(self.doc_index_path, "rb+") as file:
                 file_content = file.read()
                 if file_content:
-                    content = bson.decode_all(file_content)[0]
+                    content = chunk.decode_all(file_content)[0]
                 else:
                     content = {}
                 self.doc_reg = content.get("doc_reg", {"entry": 0})
@@ -636,7 +677,7 @@ class dbDoc:
         def write_file(file, content) -> None:
             file.seek(0)
             file.truncate()
-            file.write(bson.encode(content))
+            file.write(chunk.encode(content))
 
         try:
             mode = "rb+"
@@ -654,7 +695,6 @@ class dbDoc:
         Args:
             hid (str): The unique ID for the log entry.
             index_unit (Any): The index data to be logged.
-            log_file (str): The log file name to save the index.
 
         Raises:
             ValueError: If `index_unit` is empty or None.
@@ -663,7 +703,7 @@ class dbDoc:
             raise ValueError("ox-db: No data provided for logging")
         self.doc_index[hid] = index_unit
         self.doc_reg["entry"] += 1
-        self.save_index()
+        # self.save_index()
 
     def _retrive_doc_all(self, docfile: str) -> Dict[str, Any]:
         """

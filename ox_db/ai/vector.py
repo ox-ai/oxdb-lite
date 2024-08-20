@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict
-from sentence_transformers import SentenceTransformer
+from ox_onnx.runtime import OnnxModel
 import numpy as np
 
 SIM_FORMAT = ["dp", "ed", "cs"]
@@ -10,7 +10,7 @@ class Model:
         Initializes the Model class with the default sentence transformer model.
         """
         self.md_name = "sentence-transformers/all-MiniLM-L6-v2"
-        self.model = SentenceTransformer(self.md_name)
+        self.model = OnnxModel(self.md_name)
 
     def load(self, md_name: str):
         """
@@ -20,9 +20,9 @@ class Model:
             md_name (str): The name of the model to load.
         """
         self.md_name = md_name
-        self.model = SentenceTransformer(self.md_name)
+        self.model = OnnxModel(self.md_name)
 
-    def encode(self, data):
+    def generate(self, data:list):
         """
         Encodes the input data into embeddings using the loaded model.
 
@@ -32,7 +32,7 @@ class Model:
         Returns:
             A list of embeddings corresponding to the input data.
         """
-        embeddings = self.model.encode(data, normalize_embeddings=True, convert_to_numpy=True).tolist()
+        embeddings = self.model.generate(data)
         return embeddings
 
     def search(self, query: str, doc_embed: list = [], doc_data: list = [], by: Optional[str] = "dp") -> Dict[str, List]:
@@ -51,9 +51,9 @@ class Model:
         Returns:
             Dict [str, List]: A dictionary containing the indices and similarity scores of the top higher to least results.
         """
-        query_embed = np.array(self.encode(query))
+        query_embed = np.array(self.generate(query))[0]
         if len(doc_data) > 0:
-            doc_embed = np.array(self.encode(doc_data))
+            doc_embed = np.array(self.generate(doc_data))
         elif len(doc_embed) > 0:
             doc_embed = np.array(doc_embed)
         else:
@@ -99,8 +99,8 @@ class Model:
                 f"ox-db: sim_format should be one of {SIM_FORMAT}, not {sim_format}"
             )
 
-        veca = np.array(veca).flatten()
-        vecb = np.array(vecb).flatten()
+        veca = np.array(veca)
+        vecb = np.array(vecb)
 
         if sim_format == "dp":
             return np.dot(veca, vecb)

@@ -40,15 +40,39 @@ class dbDoc:
 
     def push(
         self,
-        data: Any,
+        data: Optional[Union[List[str], str]] = None,
+        datax: Optional[Any] = None,
         uid: Optional[str] = None,
         embeddings: bool = True,
-        description: Optional[Any] = None,
+        description: Optional[Union[str, List[str]]] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> dict:
+        """
+        Sends a push request to the server to log the provided data.
+
+        Args:
+            data (Optional[Union[List[str], str]], optional): The data to be logged. Must not be empty or None.
+            datax (Optional[Any], optional): Additional data that can be converted to a string and logged. Defaults to None.
+            uid (Optional[str], optional): A unique ID for the log entry. Defaults to None.
+            embeddings (bool, optional): Whether to generate embeddings for the data. Defaults to True.
+            description (Optional[Union[str, List[str]]], optional): A description related to the data. Defaults to None.
+            metadata (Optional[Dict[str, Any]], optional): Additional metadata related to the data. Defaults to None.
+
+        Returns:
+            dict: The server's response as a JSON object.
+
+        Raises:
+            ValueError: If both `data` and `datax` are provided or if neither is provided.
+            HTTPError: If the server returns a 4xx/5xx status code.
+        """
+        # Validation to ensure only one of `data` or `datax` is provided and neither is empty.
+        if (data is None and datax is None) or (data is not None and datax is not None):
+            raise ValueError("Either `data` or `datax` must be provided, but not both.")
+
         url = f"{self.base_url}/push"
         payload = {
             "data": data,
+            "datax": datax,
             "embeddings": embeddings,
             "description": description,
             "metadata": metadata,

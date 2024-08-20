@@ -1,11 +1,8 @@
 fastapi
 numpy
 pydantic
-pymongo
 Requests
-sentence_transformers
-setuptools
-transformers
+setuptools>=72.1.0
 uvicorn
 ox-doc @ git+https://github.com/ox-ai/ox-doc.git#egg=ox-doc
-
+ox-onnx @ git+https://github.com/ox-ai/ox-onnx.git#egg=ox-onnx

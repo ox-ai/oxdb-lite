@@ -1,35 +1,56 @@
 from typing import Any, Dict, List, Optional, TypeAlias, Union
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator, Field
 
 # Type Alias for uid, hid, or date queries
 embd: TypeAlias = Optional[Union[str, List[Any], bool, None]]
 hids: TypeAlias = Optional[Union[str, List[str], None]]
 
-
-from typing import Any, Dict, List, Optional, Union
-from pydantic import BaseModel, Field
-
 DOCFILE_LIST = ["data.oxd", "vec.oxd", ".index"]
 
 class PushModel(BaseModel):
-    data: Any = Field(
-        ..., description="The data to be logged. Must not be empty or None."
+    data: Optional[Union[str, List[str]]] = Field(
+        None, description="The data to be logged. Must not be empty or None."
     )
-    embeddings: embd = Field(
-        True, description="Indicates whether to generate embeddings for the data."
+    datax: Optional[Any] = Field(
+        None, description="Additional data that can be converted to a string and logged."
     )
-    description: Optional[Any] = Field(
+    embeddings: Optional[Union[bool, List[List[int]]]] = Field(
+        True, description="If True, embeddings are generated for the data. If a list of embeddings is provided, they will be used instead."
+    )
+    description: Optional[Union[str, List[str]]] = Field(
         None, description="A description related to the data."
     )
-    metadata: Optional[Dict[str, Any]] = Field(
+    metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = Field(
         None, description="Additional metadata related to the data."
     )
-    uid: Optional[str] = Field(None, description="A uid for the log entry.")
+    uid: Optional[Union[str, List[str]]] = Field(
+        None, description="A unique ID for each log entry."
+    )
 
+    @model_validator(mode='before')
+    def check_data_or_datax(cls, values):
+        data = values.get('data')
+        datax = values.get('datax')
+        if data is not None and datax is not None:
+            raise ValueError("Either `data` or `datax` must be provided, but not both.")
+        if data is None and datax is None:
+            raise ValueError("One of `data` or `datax` must be provided.")
+        return values
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "data": ["example data 1", "example data 2"],
+                "datax": None,
+                "embeddings": True,
+                "description": ["description 1", "description 2"],
+                "metadata": [{"key1": "value1"}, {"key2": "value2"}],
+                "uid": ["uid1", "uid2"]
+            }
+        }
 
 class PushResponseModel(BaseModel):
-    hid: str = Field(..., description="The unique ID of the log entry.")
-
+    hid: list[str] = Field(..., description="The unique ID of the log entry.")
 
 class PullModel(BaseModel):
     hid: hids = Field(None, description="The unique ID(s) of the log entry.")
@@ -52,12 +73,10 @@ class PullModel(BaseModel):
         True, description="Whether to apply filtering criteria."
     )
 
-
 class PullResponseModel(BaseModel):
     entries: List[Dict[str, Any]] = Field(
         ..., description="A list of dictionaries representing the log entries."
     )
-
 
 class PullHIDModel(BaseModel):
     hids: List[str] = Field(
@@ -71,13 +90,11 @@ class PullHIDModel(BaseModel):
         None, description="Data filter criteria for the log entry."
     )
 
-
 class PullHIDResponseModel(BaseModel):
     log_entries: Dict[str, Any] = Field(
         ...,
         description="A dictionary containing the log entries that match the given `hids`.",
     )
-
 
 class SearchModel(BaseModel):
     query: str = Field(..., description="The search query string.")
@@ -113,7 +130,6 @@ class SearchModel(BaseModel):
         False,
         description="Whether to apply `where_data` filter before performing vector search.",
     )
-
 
 class SearchResponseModel(BaseModel):
     entries: int = Field(..., description="Number of entries found.")
