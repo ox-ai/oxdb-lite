@@ -4,6 +4,8 @@
 
 **ox-db** is an open-source, AI-native vector embedding database tailored for efficient storage and retrieval of vector embeddings. It is also designed to support the construction of Retrieval-Augmented Generation (RAG) systems, making it an ideal solution for managing knowledge databases in AI assistant applications.
 
+ox-db is custamized to run in navtive machine with minimal memory 
+
 ## Installation:
 
 always build from source for latest and bug free version
