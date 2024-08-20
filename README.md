@@ -2,23 +2,22 @@
 
 ## about :
 
-**ox-db** is an open-source, AI-native vector embedding database tailored for efficient storage and retrieval of vector embeddings. It is also designed to support the construction of Retrieval-Augmented Generation (RAG) systems, making it an ideal solution for managing knowledge databases in AI assistant applications.
+- **ox-db** is an open-source, AI-native vector embedding database tailored for efficient storage and retrieval of vector embeddings. It is also designed to support the construction of Retrieval-Augmented Generation (RAG) systems, making it an ideal solution for managing knowledge databases in AI assistant applications.
 
-ox-db is custamized to run in navtive machine with minimal memory 
+- ox-db is custamized to run in navtive machine with minimal memory and uses onnx models in **[ox-onnx](https://github.com/ox-ai/ox-onnx.git)** runtime for embadding
+
+- ox-db is uses **[ox-onnx](https://github.com/ox-ai/ox-onnx.git)** embadding interface model for generating vectore embaddings from data 
+
+- ox-db is build on top of **[ox-doc](https://github.com/ox-ai/ox-doc.git)** core ox-db data management and documents handelling storage retrieval serialization presistance are all done using **[ox-doc](https://github.com/ox-ai/ox-doc.git)**
+
 
 ## Installation:
 
 always build from source for latest and bug free version
 
-> note : install [ox-doc](https://github.com/ox-ai/ox-doc.git) before installing ox-db
-
 ### pre requisite
 
-- ox-db is build on top of **[ox-doc](https://github.com/ox-ai/ox-doc.git)** core ox-db data management and documents handelling storage retrieval serialization presistance are all done using **[ox-doc](https://github.com/ox-ai/ox-doc.git)**
-
-```
-pip install git+https://github.com/ox-ai/ox-doc.git
-```
+- refer **[ox-onnx](https://github.com/ox-ai/ox-onnx.git)** and **[ox-doc](https://github.com/ox-ai/ox-doc.git)** if there is any installation dependency issues
 
 ### build from source
 
@@ -49,16 +48,19 @@ pip install ox-db
 
 - initiate a shell session in terminall for quick access
 
-<pre>                                                                                                           
-<font color="#5EBDAB">┌──(</font><font color="#277FFF"><b>lokesh㉿kali</b></font><font color="#5EBDAB">)-[</font><b>~</b><font color="#5EBDAB">]</font>
-<font color="#5EBDAB">└─</font><font color="#277FFF"><b>$</b></font> <font color="#49AEE6">oxdb.shell</font>                                     
-oxdb&gt; search &quot;implementation plan&quot;
+<pre><font color="#5EBDAB">┌──(</font><font color="#277FFF"><b>lokesh㉿kali</b></font><font color="#5EBDAB">)-[</font><b>~</b><font color="#5EBDAB">]</font>
+<font color="#5EBDAB">└─</font><font color="#277FFF"><b>$</b></font> <font color="#49AEE6">oxdb.shell</font>
+oxdb&gt; info
 oxdb : 
-{&apos;data&apos;: [&apos;data-1&apos;,
-          &apos;need to implement pdfsearch db with ui&apos;,
-          &apos;{&quot;datas&quot;: [&quot;project-queue&quot;, &quot;priority is db&quot;]}&apos;]}
-</pre>
-
+{&apos;db&apos;: &apos;hosted&apos;,
+ &apos;db_path&apos;: &apos;/home/lokesh/ox-db/hosted.oxdb&apos;,
+ &apos;doc_list&apos;: [&apos;log-[18_08_2024]&apos;, &apos;log-[20_08_2024]&apos;, &apos;log-[19_08_2024]&apos;],
+ &apos;doc_name&apos;: &apos;log-[20_08_2024]&apos;,
+ &apos;doc_path&apos;: &apos;/home/lokesh/ox-db/hosted.oxdb/log-[20_08_2024]&apos;,
+ &apos;vec_model&apos;: &apos;sentence-transformers/all-MiniLM-L6-v2&apos;}
+oxdb&gt; ^C
+Exiting shell...
+                      </pre>
 to start ox-db shell run below cmd refere [shell.log.md](./docs/shell.log.md) for further detials
 
 ### Linux , macos and Windows
