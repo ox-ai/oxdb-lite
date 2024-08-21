@@ -18,7 +18,6 @@ setup(
         ],
     },
     package_data={
-        # 'ox_db.server': ['assets/*.html', 'assets/*.svg'],
         "": ["requirements.txt", "README.md"]
     },
     include_package_data=True,

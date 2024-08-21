@@ -200,8 +200,10 @@ python -m ox_db.server.log --apikey "hi0x" --host --port 8008
 ├── __init__.py
 ├── ai
 │   ├── __init__.py
-│   ├── transfomer.py
 │   └── vector.py
+├── client
+│   ├── __init__.py
+│   └── log.py
 ├── db
 │   ├── __init__.py
 │   ├── log.py
@@ -211,7 +213,9 @@ python -m ox_db.server.log --apikey "hi0x" --host --port 8008
 │   └── log.py
 ├── settings.py
 ├── shell
+│   ├── __init__.py
 │   └── log.py
 └── utils
+    ├── __init__.py
     └── dp.py
 ```
