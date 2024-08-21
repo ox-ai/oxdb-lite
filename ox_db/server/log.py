@@ -53,29 +53,9 @@ def verify_api_key(x_api_key: str = Header(...)):
 
 @app.get("/", response_class=HTMLResponse)
 async def get(request: Request):
-    # user_agent = request.headers.get("User-Agent", "")
-    # accept_header = request.headers.get("Accept", "")
-
-    # # Regex to match common browser user-agent strings
-    # browser_user_agent_pattern = re.compile(r"Mozilla|Chrome|Safari|Firefox|Edge", re.I)
-
-    # if browser_user_agent_pattern.search(user_agent) and "text/html" in accept_header:
-    #     # Browser request - Serve the HTML file
-
-    #     with pkg_resources.path(assets, 'index.html') as index_path:
-    #         return FileResponse(index_path, media_type="text/html")
 
     res = {"oxdb.server": "health.good", "oxdb.alive": True}
     return JSONResponse(content=res)
-
-
-# # Serve the SVG file
-# @app.get("/assets/ox-nn.svg", response_class=FileResponse)
-# async def get_svg():
-
-#     with pkg_resources.path(assets, 'ox-nn-v1.svg') as img_path:
-#         return FileResponse(path=img_path)
-
 
 @app.post("/shell")
 def shell(script: str, verified: None = Depends(verify_api_key)):

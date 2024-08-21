@@ -4,9 +4,7 @@
 
 - **ox-db** is an open-source, AI-native vector embedding database tailored for efficient storage and retrieval of vector embeddings. It is also designed to support the construction of Retrieval-Augmented Generation (RAG) systems, making it an ideal solution for managing knowledge databases in AI assistant applications.
 
-- ox-db is custamized to run in navtive machine with minimal memory and uses onnx models in **[ox-onnx](https://github.com/ox-ai/ox-onnx.git)** runtime for embadding
-
-- ox-db is uses **[ox-onnx](https://github.com/ox-ai/ox-onnx.git)** embadding interface model for generating vectore embaddings from data 
+- ox-db is custamized to run in navtive machine with minimal memory and uses onnx models in **[ox-onnx](https://github.com/ox-ai/ox-onnx.git)** runtime for generating vectore embaddings from data 
 
 - ox-db is build on top of **[ox-doc](https://github.com/ox-ai/ox-doc.git)** core ox-db data management and documents handelling storage retrieval serialization presistance are all done using **[ox-doc](https://github.com/ox-ai/ox-doc.git)**
 
@@ -61,6 +59,7 @@ oxdb :
 oxdb&gt; ^C
 Exiting shell...
                       </pre>
+
 to start ox-db shell run below cmd refere [shell.log.md](./docs/shell.log.md) for further detials
 
 ### Linux , macos and Windows
@@ -109,7 +108,7 @@ log.push("data-1")
 # can add uid or uuids and additional metadata
 log.push(data="need to implement pdfsearch db",uid="",metadata={"note-type" :"project-note","org":"ox-ai"})
 # support different data types
-log.push(data ={"datas":["project-queue","priority is db" ]})
+log.push(datax ={"datas":["project-queue","priority is db" ]})
 
 # can retrive data by metadata filters or string search
 log.pull(uid="projects")
@@ -123,7 +122,7 @@ log.search("data",2)
 #                 - "dp": Dot Product (default)
 #                 - "ed": Euclidean Distance
 #                 - "cs": Cosine Similarity
-log.search(query="data",topn=2,by="ed",where={"org":"ox-ai"},where_data={"search_string":"super data processor"})
+log.search(query="project plan",topn=2,by="ed",where={"org":"ox-ai"},where_data={"search_string":"db"})
 ```
 
 ```py
