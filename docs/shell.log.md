@@ -28,6 +28,20 @@ oxdb :
           &apos;{&quot;datas&quot;: [&quot;project-queue&quot;, &quot;priority is db&quot;]}&apos;]}
 </pre>
 
+
+<pre><font color="#5EBDAB">┌──(</font><font color="#277FFF"><b>lokesh㉿kali</b></font><font color="#5EBDAB">)-[</font><b>~</b><font color="#5EBDAB">]</font>
+<font color="#5EBDAB">└─</font><font color="#277FFF"><b>$</b></font> <font color="#49AEE6">oxdb.shell</font>
+oxdb&gt; info
+oxdb : 
+{&apos;db&apos;: &apos;hosted&apos;,
+ &apos;db_path&apos;: &apos;/home/lokesh/ox-db/hosted.oxdb&apos;,
+ &apos;doc_list&apos;: [&apos;log-[18_08_2024]&apos;, &apos;log-[20_08_2024]&apos;, &apos;log-[19_08_2024]&apos;],
+ &apos;doc_name&apos;: &apos;log-[20_08_2024]&apos;,
+ &apos;doc_path&apos;: &apos;/home/lokesh/ox-db/hosted.oxdb/log-[20_08_2024]&apos;,
+ &apos;vec_model&apos;: &apos;sentence-transformers/all-MiniLM-L6-v2&apos;}
+oxdb&gt; ^C
+Exiting shell...
+                      </pre>
 to start ox-db shell run below cmd refere [shell.log.md](./docs/shell.log.md) for further detials
 
 ### Linux , macos and Windows

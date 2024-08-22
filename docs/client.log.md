@@ -28,8 +28,8 @@ vector_search_results = log.search(
     query="implementation plan ?",
     topn=2,
     by="ed",
-    where={"source": "ox-ai"},
-    where_data={"search_string": "super data processor"}
+    where={"org": "ox-ai"},
+    where_data={"search_string": "db"}
 )
 print(vector_search_results)
 ```

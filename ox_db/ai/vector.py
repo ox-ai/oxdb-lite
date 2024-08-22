@@ -10,7 +10,7 @@ class Model:
         Initializes the Model class with the default sentence transformer model.
         """
         self.md_name = "sentence-transformers/all-MiniLM-L6-v2"
-        self.model = OnnxModel(self.md_name)
+        self.model = OnnxModel(self.md_name).load()
 
     def load(self, md_name: str):
         """
@@ -20,7 +20,7 @@ class Model:
             md_name (str): The name of the model to load.
         """
         self.md_name = md_name
-        self.model = OnnxModel(self.md_name)
+        self.model = OnnxModel(self.md_name).load()
 
     def generate(self, data:list):
         """

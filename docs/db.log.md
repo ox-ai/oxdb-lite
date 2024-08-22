@@ -28,7 +28,7 @@ log.search("data",2)
 #                 - "dp": Dot Product (default)
 #                 - "ed": Euclidean Distance
 #                 - "cs": Cosine Similarity
-log.search(query="data",topn=2,by="ed",where={"org":"ox-ai"},where_data={"search_string":"super data processor"})
+log.search(query="implementation plan",topn=2,by="ed",where={"org":"ox-ai"},where_data={"search_string":"db"})
 ```
 
 ```py
