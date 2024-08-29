@@ -2,10 +2,10 @@
 
 ```py
 
-from ox_db.client.log import Oxdb
+from ox_db.client.log import OxdbClient
 
 # Initialize the Oxdb client
-client = Oxdb(base_url="http://localhost:8000", db_name="noteDB", api_key="ox-db-prime")
+client = OxdbClient(base_url="http://localhost:8000", db_name="noteDB", api_key="ox-db-prime")
 
 # Get the document interface
 log = client.get_doc("note-doc")

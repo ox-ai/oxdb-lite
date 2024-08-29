@@ -4,10 +4,9 @@
 
 - **ox-db** is an open-source, AI-native vector embedding database tailored for efficient storage and retrieval of vector embeddings. It is also designed to support the construction of Retrieval-Augmented Generation (RAG) systems, making it an ideal solution for managing knowledge databases in AI assistant applications.
 
-- ox-db is custamized to run in navtive machine with minimal memory and uses onnx models in **[ox-onnx](https://github.com/ox-ai/ox-onnx.git)** runtime for generating vectore embaddings from data 
+- ox-db is custamized to run in navtive machine with minimal memory and uses onnx models in **[ox-onnx](https://github.com/ox-ai/ox-onnx.git)** runtime for generating vectore embaddings from data
 
 - ox-db is build on top of **[ox-doc](https://github.com/ox-ai/ox-doc.git)** core ox-db data management and documents handelling storage retrieval serialization presistance are all done using **[ox-doc](https://github.com/ox-ai/ox-doc.git)**
-
 
 ## Installation:
 
@@ -33,14 +32,13 @@ pip install ox-db
 
 - refere [test.log.ipynb](./test.log.ipynb) and [docs.db.log](./docs/db.log.md) for understanding the underlying usage
 
-## db access interfases :
+## db access interfaces :
 
-- [shell mode](#ox-db-shell)
+- [db shell mode](#ox-db-shell)
 - [db core mode](#ox-db-core)
 - [db client-server mode](#ox-db-server)
 
-
-## ox-db shell 
+## ox-db shell
 
 ### > shell session :
 
@@ -56,10 +54,9 @@ oxdb :
           &apos;{&quot;datas&quot;: [&quot;project-queue&quot;, &quot;priority is db&quot;]}&apos;]}
 </pre>
 
-
 to start ox-db shell run below cmd refere [shell.log.md](./docs/shell.log.md) for further detials
 
-### Linux , macos and Windows
+
 
 - cmd to initiate terminal session which can intract directly to ox-db
 
@@ -83,7 +80,7 @@ python -m ox_db.shell.log
 
 ## ox-db core
 
-### db core interfase :
+### db core interface :
 
 - to directly work with ox-db use code `Oxdb form ox_db.db.log`
 - direct access gives lot of low level api access for inspecting the db
@@ -132,42 +129,54 @@ log.search(query="project plan",topn=2,by="ed",where={"org":"ox-ai"},where_data=
 
 ```
 
-
 ## ox-db server
 
 ### access with client-server mode :
 
-- in clien server mode need to start the server with command
-
-```bash
-oxdb.server --apikey "your-api-key" --host
-```
-
-- can use python client binding high level interfase code which is same as core db access refere [client.log](./docs/client.log.md)
-- java script api coming soon u can directly acces using spi
-
-- to start ox-db server run below commend refer [server.log.md](./docs/server.log.md)
-
-### Linux , macos and Windows
-
-- set path in terminal
+- in clien server mode need to start the server first with command
 
 ```bash
 #default apikey = "ox-db-prime"
-export OXDB_API_KEY="test-apikey"
-echo $OXDB_API_KEY
-
+oxdb.server --apikey "your-api-key" --host --port 8008
 ```
 
-```bash
-oxdb.server --apikey "hi0x" --host --port 8008
-```
-
-- if path not correctly assigned due too sudo or admin access use below cmd
+- you can use python client binding high level interface code which is same as core db access, refere [client.log](./docs/client.log.md)
+- java script api coming soon u can directly acces using api
+- for more detials refer [server.log.md](./docs/server.log.md)
+- if path not correctly assigned due to sudo or admin access use below cmd
 
 ```bash
 python -m ox_db.server.log --apikey "hi0x" --host --port 8008
 ```
+
+### To set api key in environment variable
+
+<details>
+<summary> using terminal
+ </summary>
+
+```bash
+# Set the environment variable
+export OXDB_API_KEY="oxdb-apikey-001"
+# Access the environment variable
+echo $OXDB_API_KEY
+
+```
+
+</details>
+
+<details>
+<summary>using python </summary>
+
+```py
+import os
+# Set the environment variable
+os.environ["OXDB_API_KEY"] = "ox-db-101"
+# Access the environment variable
+api_key = os.getenv("OXDB_API_KEY")
+```
+
+</details>
 
 ## docs :
 
@@ -181,12 +190,12 @@ python -m ox_db.server.log --apikey "hi0x" --host --port 8008
 
 | Title                     | Status | Description                                             |
 | ------------------------- | ------ | ------------------------------------------------------- |
-| log                       | ip     | log data base system                                    |
-| vector integration        | ip     | log vecctor data base                                   |
-| query engine              | ip     | vector search                                           |
+| log                       | dn     | log data base system                                    |
+| vector integration        | dn     | log vecctor data base                                   |
+| query engine              | dn     | vector search                                           |
 | demon search engine       |        | optimized search                                        |
-| onxx runtime              |        | efficiend vectorizer in onxx                            |
-| key lang translator       |        | natural lang to key lang                                |
+| onxx runtime              | dn     | efficiend vectorizer in onxx                            |
+| key lang translator       | ip     | natural lang to key lang                                |
 | plugin integration        |        | system to write add-on to intract with vector data base |
 | data structurer as plugin |        | structure raw data to custom format                     |
 

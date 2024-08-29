@@ -2,7 +2,7 @@ import requests
 from typing import Any, Dict, Optional, List, Union
 
 
-class Oxdb:
+class OxdbClient:
     def __init__(
         self,
         base_url: str,
