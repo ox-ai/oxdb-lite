@@ -10,7 +10,7 @@ from ox_doc.ld import OxDoc
 from ox_doc.data_process import Chunk
 
 from ox_db.db.types import embd, hids, DOCFILE_LIST
-from ox_db.ai.vector import Model
+from ox_db.ai.embed import VectorModel,SIM_FORMAT
 from ox_db.utils.dp import (
     gen_hid,
     get_immediate_subdirectories,
@@ -19,11 +19,11 @@ from ox_db.utils.dp import (
 )
 
 dbDoc = ForwardRef("dbDoc")
-Default_vec_model = Model()
+Default_vec_model = VectorModel()
 chunk = Chunk()
 
 class Oxdb:
-    def __init__(self, db: str = "", db_path: Optional[str] = None,vec_model:Model = None):
+    def __init__(self, db: str = "", db_path: Optional[str] = None,vec_model:VectorModel = None):
         """
         Initializes an instance of the Oxdb class.
 
@@ -32,7 +32,7 @@ class Oxdb:
             db_path (Optional[str], optional): The path to the database directory. Defaults to None.
         """
         self.db: str = db
-        self.vec: Model = vec_model or Default_vec_model
+        self.vec: VectorModel = vec_model or Default_vec_model
         self.doc: Optional[dbDoc] = None
         self.doc_list: List[str] = []
 
@@ -40,7 +40,7 @@ class Oxdb:
         self.get_db(db, db_path)
 
     
-    def get_db(self, db: str = "", db_path: Optional[str] = None) -> str:
+    def get_db(self, db: str = None , db_path: Optional[str] = None) -> str:
         """
         Returns the current database path, optionally updating the database name and path.
 
@@ -51,7 +51,7 @@ class Oxdb:
         Returns:
             str: The validated and potentially updated path to the database.
         """
-        self.db = db
+        self.db = db or self.db
         self.db_path = self._db_path_validator(db, db_path)
         os.makedirs(self.db_path, exist_ok=True)
         self.get_doc()
@@ -81,7 +81,7 @@ class Oxdb:
 
         return final_path
 
-    def get_doc(self, doc: Optional[str] = None) -> dbDoc:  # type: ignore # Forward reference
+    def get_doc(self, doc: Optional[str] = None) -> dbDoc:  
         """
         Returns an instance of the OxDoc class, connecting it to the database.
 
@@ -110,7 +110,7 @@ class Oxdb:
         Returns detailed information about the current database and the active document.
 
         Returns:
-            Dict[str, Any]: A dictionary containing information about the database, document, and vector model.
+            Dict[str, Any]: A dictionary containing information about the database, document, and VectorModel model.
         """
         res = {
             "db": self.db,
@@ -133,18 +133,18 @@ class dbDoc:
         """
         self.doc_name: str = doc or "log-" + datetime.now().strftime("[%d_%m_%Y]")
         self.db_path: Optional[str] = None
-        self.vec: Model = None
+        self.vec: VectorModel = None
         self.doc_path: Optional[str] = None
         self.doc_index_path: Optional[str] = None
         self.doc_reg: Dict[str, Any] = {}
 
-    def connect_db(self, db_path: str, vec: Model) -> None:
+    def connect_db(self, db_path: str, vec: VectorModel) -> None:
         """
         Connects the document to the database and loads the document data.
 
         Args:
             db_path (str): The path to the database directory.
-            vec (Any): The vector model associated with the document.
+            vec (Any): The VectorModel model associated with the document.
 
         Raises:
             ValueError: If the database path is invalid.
@@ -153,7 +153,7 @@ class dbDoc:
             raise ValueError("Invalid database path provided.")
         self.db = os.path.basename(db_path)
         self.db_path = db_path
-        self.vec: Model = vec
+        self.vec: VectorModel = vec
         self.load_doc(self.doc_name)
 
     def get_doc(self, doc: str) -> str:
@@ -247,10 +247,10 @@ class dbDoc:
         self,
         data: Optional[Union[List[str], str]] = None,
         datax: Optional[Any] = None,
-        embeddings: Optional[Union[bool, list[list[int]]]] = True,
+        uid: Optional[Union[str, list[str]]] = None,
         description: Optional[Union[str, list[str]]] = None,
         metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
-        uid: Optional[Union[str, list[str]]] = None,
+        embeddings: Optional[Union[bool, list[list[int]]]] = True,
         **kwargs,
     ) -> list[str]:
         """
@@ -260,13 +260,12 @@ class dbDoc:
         Args:
             data (Optional[Union[List[str], str]], optional): The data to be logged. Must not be empty or None.
             datax (Optional[Any], optional): Additional data that can be converted to a string and logged. Defaults to None.
-            embeddings (Optional[Union[bool, List[List[int]]]], optional): If True, embeddings are generated for the data.
-                If a list of embeddings is provided, they will be used instead. Defaults to True.
+            uid (Optional[Union[str, List[str]]], optional): A unique ID for each log entry. Defaults to None.
             description (Optional[Union[str, List[str]]], optional): A description related to the data. Defaults to None.
             metadata (Optional[Union[Dict[str, Any], List[Dict[str, Any]]]], optional): Additional metadata related to the data.
                 Defaults to None.
-            uid (Optional[Union[str, List[str]]], optional): A unique ID for each log entry. Defaults to None.
-
+            embeddings (Optional[Union[bool, List[List[int]]]], optional): If True, embeddings are generated for the data.
+                If a list of embeddings is provided, they will be used instead. Defaults to True.
         Returns:
             list[str]: A list of unique IDs for the log entries.
 
@@ -326,11 +325,13 @@ class dbDoc:
                 "description": description_list[i],
             }
             index_metadata: Dict[str, Any] = {
-                "uid": uid_list[i] or "uid",
+                # "uid": uid_list[i] or "uid",
                 "doc": doc,
                 "time": datetime.now().strftime("%H:%M:%S"),
                 "date": datetime.now().strftime("%d-%m-%Y"),
             }
+            if uid_list[i] :
+                index_metadata["uid"] = uid_list[i]
 
             oxd_embedding_dict[hid] = embedding_list[i]
             oxd_data_dict[hid] = doc_unit
@@ -362,7 +363,7 @@ class dbDoc:
         where_data: Optional[Dict[str, Any]] = None,
         search_all_filter: Optional[bool] = False,
         apply_filter: Optional[bool] = True,
-    ) -> List[Dict[str, Any]]:
+    ) -> Dict[str, Any]:
         """
         Retrieves log entries based on unique ID, uid, time, date, or additional filter criteria.
 
@@ -485,7 +486,6 @@ class dbDoc:
         self,
         query: str,
         topn: int = 10,
-        log_entries: Optional[Dict[str, Dict[str, Any]]] = None,
         by: Optional[str] = "dp",
         hid: Optional[hids] = None,
         uid: Optional[str] = None,
@@ -504,7 +504,6 @@ class dbDoc:
         Args:
             query (str): The search query string.
             topn (int, optional): Number of top results to return. Defaults to 10.
-            log_entries (Optional[Dict[str, Dict[str, Any]]], optional): Pre-fetched log entries to search within. Defaults to None.
             by (Optional[str], optional): The search method. Defaults to "dp".
                 - "dp": Dot Product (default)
                 - "ed": Euclidean Distance
@@ -517,8 +516,8 @@ class dbDoc:
             where_data (Optional[Dict[str, Any]], optional): Data filter criteria, such as a specific search string within the log entries. Defaults to None.
             includes (Optional[List[str]], optional): Fields to include in the search results. Defaults to ["hid", "data", "description"].
             search_all_filter (Optional[bool], optional): Whether to apply all filters across all entries. Defaults to False.
-            apply_filter_last (Optional[bool], optional): Whether to apply filters after vector search. Defaults to False.
-            where_data_before_vec_search (Optional[bool], optional): Whether to apply `where_data` filter before performing vector search. Defaults to False.
+            apply_filter_last (Optional[bool], optional): Whether to apply filters after VectorModel search. Defaults to False.
+            where_data_before_vec_search (Optional[bool], optional): Whether to apply `where_data` filter before performing VectorModel search. Defaults to False.
 
         Returns:
             Dict[str, Any]: The search results, including matched log entries and their similarity scores.
@@ -530,11 +529,11 @@ class dbDoc:
         if includes is None:
             includes = ["hid", "data", "description"]
 
+
         # Validate the search method
-        valid_search_methods = ["dp", "ed", "cs"]
-        if by not in valid_search_methods:
+        if by not in SIM_FORMAT:
             raise ValueError(
-                f"Invalid search method '{by}'. Must be one of {valid_search_methods}."
+                f"Invalid search method '{by}'. Must be one of {SIM_FORMAT}."
             )
 
         # Prepare the search query for pulling entries
@@ -550,17 +549,18 @@ class dbDoc:
             "apply_filter": not apply_filter_last,
         }
 
-        # Control whether `where_data` is applied before vector search
+        # Control whether `where_data` is applied before Vector search
         if not where_data_before_vec_search:
             search_query["where_data"] = None
 
-        # Pull vector log entries for the search
-        vec_log_entries = log_entries or self.pull(**search_query)
+
+        # Pull Vec log entries for the search
+        vec_log_entries = self.pull(**search_query)
         dataset_hids = list(vec_log_entries.keys())
         dataset = list(vec_log_entries.values())
 
-        # Perform the search on the vector data
-        search_scores = self.vec.search(query, dataset, by=by)
+        # Perform the search on the Vec data
+        search_scores = self.vec.search(query, embeds=dataset, by=by)
         search_res = {
             "entries": 0,
             "hid": [],
@@ -610,6 +610,8 @@ class dbDoc:
 
         return search_res
 
+    def delete():
+        pass
     def show(
         self,
         uid: Optional[str] = None,

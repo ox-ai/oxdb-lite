@@ -64,14 +64,13 @@ to start ox-db shell run below cmd refere [shell.log.md](./docs/shell.log.md) fo
 oxdb.shell
 ```
 
-- on terminal access : to send db query to server with out starting a session
-- through terminal start the server then execute `oxdb.shell "oxdb query"`
-- refere [ox-db server](#ox-db-server) to start server
+- on terminal access : to send db query with out starting a session
+<!-- - through terminal start the server then execute `oxdb.shell 'oxdb query'`
+- refere [ox-db server](#ox-db-server) to start server -->
 
 ```bash
-oxdb.shell "oxdb query"
+oxdb.shell 'search("data")'
 ```
-
 - if path not correctly assigned due too sudo or admin access use below cmd
 
 ```bash
@@ -140,7 +139,7 @@ log.search(query="project plan",topn=2,by="ed",where={"org":"ox-ai"},where_data=
 oxdb.server --apikey "your-api-key" --host --port 8008
 ```
 
-- you can use python client binding high level interface code which is same as core db access, refere [client.log](./docs/client.log.md)
+- you can use python client binding high level interface code which is same as core db access, refere [test.client](test.client.ipynb) and [client.log](./docs/client.log.md) 
 - java script api coming soon u can directly acces using api
 - for more detials refer [server.log.md](./docs/server.log.md)
 - if path not correctly assigned due to sudo or admin access use below cmd
