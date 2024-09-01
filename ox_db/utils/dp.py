@@ -35,6 +35,30 @@ def gen_hid(data):
   return sha256_hash.hexdigest()
 
 
+
+def delete_folder_and_contents(folder_path: str):
+    """
+    Delete all files and subfolders inside the specified folder, and then delete the folder itself.
+
+    Args:
+        folder_path (str): The path to the folder to be deleted.
+    """
+    if os.path.exists(folder_path):
+        # Remove all contents inside the folder
+        for root, dirs, files in os.walk(folder_path, topdown=False):
+            # Remove files
+            for file in files:
+                file_path = os.path.join(root, file)
+                os.remove(file_path)
+
+            # Remove subdirectories
+            for dir in dirs:
+                dir_path = os.path.join(root, dir)
+                os.rmdir(dir_path)
+
+        # Finally, remove the folder itself
+        os.rmdir(folder_path)
+
 def join_list(lists: List[str], delimiter: str = "||"):
     listoutput = [delimiter.join(lists)]
 

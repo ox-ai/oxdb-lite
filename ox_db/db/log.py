@@ -10,8 +10,9 @@ from ox_doc.ld import OxDoc
 from ox_doc.data_process import Chunk
 
 from ox_db.db.types import embd, hids, DOCFILE_LIST
-from ox_db.ai.embed import VectorModel,SIM_FORMAT
+from ox_db.ai.embed import VectorModel, SIM_FORMAT
 from ox_db.utils.dp import (
+    delete_folder_and_contents,
     gen_hid,
     get_immediate_subdirectories,
     strorlist_to_list,
@@ -22,68 +23,84 @@ dbDoc = ForwardRef("dbDoc")
 Default_vec_model = VectorModel()
 chunk = Chunk()
 
+
 class Oxdb:
-    def __init__(self, db: str = "", db_path: Optional[str] = None,vec_model:VectorModel = None):
+    def __init__(
+        self,
+        db: str = "",
+        db_path: Optional[str] = None,
+        vec_model: Optional[VectorModel] = None,
+    ):
         """
         Initializes an instance of the Oxdb class.
 
         Args:
             db (str, optional): The name of the database. Defaults to an empty string.
             db_path (Optional[str], optional): The path to the database directory. Defaults to None.
+            vec_model (Optional[VectorModel], optional): A vector model instance for document operations. Defaults to None.
         """
         self.db: str = db
         self.vec: VectorModel = vec_model or Default_vec_model
         self.doc: Optional[dbDoc] = None
         self.doc_list: List[str] = []
-
-        self.db_path: str = None
+        self.db_list: List[str] = []
+        self.db_path: Optional[str] = None
+        self.current_doc: Optional[str] = None
         self.get_db(db, db_path)
 
-    
-    def get_db(self, db: str = None , db_path: Optional[str] = None) -> str:
+    def get_db(self, db: Optional[str] = None, db_path: Optional[str] = None) -> str:
         """
         Returns the current database path, optionally updating the database name and path.
 
         Args:
-            db (str, optional): The name of the database. Defaults to an empty string.
+            db (Optional[str], optional): The name of the database. Defaults to None.
             db_path (Optional[str], optional): The path to the database directory. Defaults to None.
 
         Returns:
             str: The validated and potentially updated path to the database.
         """
-        self.db = db or self.db
+        if db is not None and db_path is not None:
+            raise ValueError(
+                "Either `db` or `db_path` can be provided, but not both. Both can also be empty."
+            )
+
+        db = db or "" if not db_path else None
+        self.db = db
         self.db_path = self._db_path_validator(db, db_path)
         os.makedirs(self.db_path, exist_ok=True)
         self.get_doc()
-    
-        return self.info
 
-    def _db_path_validator(self, db: str = "", db_path: Optional[str] = None) -> str:
+        return self.info()
+
+    def _db_path_validator(
+        self, db: Optional[str] = None, db_path: Optional[str] = None
+    ) -> str:
         """
         Validates and potentially updates the database path, appending the '.oxdb' extension if missing.
 
         Args:
-            db (str, optional): The name of the database. Defaults to an empty string.
+            db (Optional[str], optional): The name of the database. Defaults to None.
             db_path (Optional[str], optional): The path to the database directory. Defaults to None.
 
         Returns:
             str: The validated and potentially updated path to the database.
         """
+        if (db is None and db_path is None) or (db is not None and db_path is not None):
+            raise ValueError("Either `db` or `db_path` must be provided, but not both.")
+
         if db_path:
             dir_name = os.path.basename(db_path)
-            if not dir_name.endswith(".oxdb"):
-                new_dir_name = dir_name + ".oxdb"
-                final_path = os.path.join(os.path.dirname(db_path), new_dir_name)
-            else:
-                final_path = db_path
+            final_path = db_path if dir_name.endswith(".oxdb") else db_path + ".oxdb"
         else:
-            final_path = os.path.join(os.path.expanduser("~"), "ox-db", db + ".oxdb")
+            db = db or ""
+            db = db if db.endswith(".oxdb") else db + ".oxdb"
+            final_path = os.path.join(os.path.expanduser("~"), "ox-db", db)
 
         return final_path
 
-    def get_doc(self, doc: Optional[str] = None) -> dbDoc:  
+    def get_doc(self, doc: Optional[str] = None) -> dbDoc:
         """
-        Returns an instance of the OxDoc class, connecting it to the database.
+        Returns an instance of the dbDoc class, connecting it to the database.
 
         Args:
             doc (Optional[str], optional): The document name. Defaults to None.
@@ -93,6 +110,7 @@ class Oxdb:
         """
         self.doc = dbDoc(doc)
         self.doc.connect_db(self.db_path, self.vec)
+        self.current_doc = self.doc.doc_name
         return self.doc
 
     def get_docs(self) -> List[str]:
@@ -104,6 +122,103 @@ class Oxdb:
         """
         self.doc_list = get_immediate_subdirectories(self.db_path)
         return self.doc_list
+
+    def get_dbs(self) -> List[str]:
+        """
+        Returns a list of all database names in the default database directory.
+
+        Returns:
+            List[str]: A list of database names.
+        """
+        db_root_path = os.path.join(os.path.expanduser("~"), "ox-db")
+        self.db_list = get_immediate_subdirectories(db_root_path)
+        return self.db_list
+
+    def clean_up(self, db: Optional[str] = None, db_path: Optional[str] = None) -> bool:
+        """
+        Cleans up empty documents from the specified database or from all databases.
+
+        Args:
+            db (Optional[str], optional): The name of the database to clean. Defaults to None.
+            db_path (Optional[str], optional): The path to the database. Defaults to None.
+
+        Returns:
+            bool: True if the cleanup was successful.
+        """
+        if db is not None and db_path is not None:
+            raise ValueError(
+                "Either `db` or `db_path` can be provided, but not both. Both can also be empty."
+            )
+
+        self.get_dbs()
+        dbs_to_check = self.db_list
+        path_given = False
+
+        if db:
+            dbs_to_check = [db]
+        elif db_path:
+            dbs_to_check = [db_path]
+            path_given = True
+
+        for db_pointer in dbs_to_check:
+            if path_given:
+                self.get_db(db_path=db_pointer)
+            else:
+                self.get_db(db=db_pointer)
+            self.get_docs()
+
+            is_db_empty = True
+            for doc in self.doc_list:
+                self.get_doc(doc)
+                if not self.doc.doc_index:
+                    self.del_doc(doc)
+                else:
+                    is_db_empty = False
+            if is_db_empty:
+                self.del_db(db_path=self.db_path)
+
+        return True
+
+    def del_doc(self, doc: str) -> bool:
+        """
+        Deletes the specified document from the database.
+
+        Args:
+            doc (str): The name of the document to delete.
+
+        Returns:
+            bool: True if the document was successfully deleted.
+        """
+        self.get_docs()
+        if doc in self.doc_list:
+            doc_path = os.path.join(self.db_path, doc)
+            delete_folder_and_contents(doc_path)
+            if doc == self.current_doc:
+                self.get_doc()
+
+        return True
+
+    def del_db(self, db: Optional[str] = None, db_path: Optional[str] = None) -> bool:
+        """
+        Deletes the specified database.
+
+        Args:
+            db (Optional[str], optional): The name of the database to delete. Defaults to None.
+            db_path (Optional[str], optional): The path to the database to delete. Defaults to None.
+
+        Returns:
+            bool: True if the database was successfully deleted.
+        """
+        if (db is None and db_path is None) or (db is not None and db_path is not None):
+            raise ValueError("Either `db` or `db_path` must be provided, but not both.")
+
+        del_path = self._db_path_validator(db=db, db_path=db_path)
+        delete_folder_and_contents(del_path)
+
+        if del_path == self.db_path:
+            self.get_db()
+
+        return True
 
     def info(self) -> Dict[str, Any]:
         """
@@ -242,7 +357,7 @@ class dbDoc:
             "doc_reg": self.doc_reg,
         }
         return res
-    
+
     def push(
         self,
         data: Optional[Union[List[str], str]] = None,
@@ -301,7 +416,9 @@ class dbDoc:
             embedding_list = [[]] * data_len
 
         # Ensure all lists are the same length
-        description_list = description_list + [None] * (data_len - len(description_list))
+        description_list = description_list + [None] * (
+            data_len - len(description_list)
+        )
         uid_list = uid_list + [None] * (data_len - len(uid_list))
         metadata_list = metadata_list + [None] * (data_len - len(metadata_list))
         embedding_list = embedding_list + [[]] * (data_len - len(embedding_list))
@@ -330,7 +447,7 @@ class dbDoc:
                 "time": datetime.now().strftime("%H:%M:%S"),
                 "date": datetime.now().strftime("%d-%m-%Y"),
             }
-            if uid_list[i] :
+            if uid_list[i]:
                 index_metadata["uid"] = uid_list[i]
 
             oxd_embedding_dict[hid] = embedding_list[i]
@@ -350,7 +467,6 @@ class dbDoc:
         self.save_index()
 
         return hid_list
-
 
     def pull(
         self,
@@ -529,7 +645,6 @@ class dbDoc:
         if includes is None:
             includes = ["hid", "data", "description"]
 
-
         # Validate the search method
         if by not in SIM_FORMAT:
             raise ValueError(
@@ -552,7 +667,6 @@ class dbDoc:
         # Control whether `where_data` is applied before Vector search
         if not where_data_before_vec_search:
             search_query["where_data"] = None
-
 
         # Pull Vec log entries for the search
         vec_log_entries = self.pull(**search_query)
@@ -610,8 +724,39 @@ class dbDoc:
 
         return search_res
 
-    def delete():
-        pass
+    def delete(
+        self,
+        hid: Optional[Union[str, list[str]]] = None,
+    ) -> list[str]:
+        """
+        delete data of the given hids
+
+        Args:
+            hid (Optional[Union[str, List[str]]], optional): hid or list of hids that need to be deleted
+
+        Returns:
+            list[str]: given input that got deleted
+
+        Raises:
+            ValueError: If `hid` is None
+        """
+
+        # Validation to ensure only one of `hid` or `doc` is provided and neither is empty.
+        if hid is None:
+            raise ValueError("Either `hid` or `doc` must be provided, but not both.")
+
+        # Ensure all inputs are lists to facilitate batch processing
+
+        hid_list = hid if isinstance(hid, list) else [hid]
+        self.data_oxd.delete(hid_list)
+        self.vec_oxd.delete(hid_list)
+        for h in hid_list:
+            self.del_index(h)
+
+        self.save_index()
+
+        return hid_list
+
     def show(
         self,
         uid: Optional[str] = None,
@@ -705,6 +850,22 @@ class dbDoc:
             raise ValueError("ox-db: No data provided for logging")
         self.doc_index[hid] = index_unit
         self.doc_reg["entry"] += 1
+        # self.save_index()
+
+    def del_index(self, hid: str) -> bool:
+        """
+        delete an index entry to the index file.
+
+        Args:
+            hid (str): The unique ID for the log entry.
+
+        Raises:
+            ValueError: If `his` is empty or None.
+        """
+        if not hid:
+            raise ValueError("ox-db: No hid provided for deletion")
+        del self.doc_index[hid]
+        self.doc_reg["entry"] -= 1
         # self.save_index()
 
     def _retrive_doc_all(self, docfile: str) -> Dict[str, Any]:

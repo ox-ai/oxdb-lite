@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="ox-db",
-    version="0.0.01",
+    version="0.0.1",
     description="An OX-AI vector database",
     author="Lokeshwaran M",
     author_email="lokeshwaran.m23072003@gmail.com",
