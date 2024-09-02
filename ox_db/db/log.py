@@ -27,7 +27,7 @@ chunk = Chunk()
 class Oxdb:
     def __init__(
         self,
-        db: str = "",
+        db: str = None,
         db_path: Optional[str] = None,
         vec_model: Optional[VectorModel] = None,
     ):
@@ -39,6 +39,10 @@ class Oxdb:
             db_path (Optional[str], optional): The path to the database directory. Defaults to None.
             vec_model (Optional[VectorModel], optional): A vector model instance for document operations. Defaults to None.
         """
+        if db is not None and db_path is not None:
+            raise ValueError(
+                "Either `db` or `db_path` can be provided, but not both. Both can also be empty."
+            )
         self.db: str = db
         self.vec: VectorModel = vec_model or Default_vec_model
         self.doc: Optional[dbDoc] = None
@@ -65,8 +69,7 @@ class Oxdb:
             )
 
         db = db or "" if not db_path else None
-        self.db = db
-        self.db_path = self._db_path_validator(db, db_path)
+        self.db, self.db_path = self._db_path_validator(db, db_path)
         os.makedirs(self.db_path, exist_ok=True)
         self.get_doc()
 
@@ -83,20 +86,24 @@ class Oxdb:
             db_path (Optional[str], optional): The path to the database directory. Defaults to None.
 
         Returns:
-            str: The validated and potentially updated path to the database.
+            set(db,db_path): The validated and potentially updated path to the database.
         """
         if (db is None and db_path is None) or (db is not None and db_path is not None):
-            raise ValueError("Either `db` or `db_path` must be provided, but not both.")
-
+            raise ValueError(
+                "Either `db` or `db_path` must be provided, but not both. Both must not be empty"
+            )
+        
         if db_path:
             dir_name = os.path.basename(db_path)
+            db = dir_name.split(".oxdb")[0] if dir_name.endswith(".oxdb") else dir_name
             final_path = db_path if dir_name.endswith(".oxdb") else db_path + ".oxdb"
+        elif db:
+            db = db.split(".oxdb")[0] if db.endswith(".oxdb") else db
+            final_path = os.path.join(os.path.expanduser("~"), "ox-db", db + ".oxdb")
         else:
-            db = db or ""
-            db = db if db.endswith(".oxdb") else db + ".oxdb"
-            final_path = os.path.join(os.path.expanduser("~"), "ox-db", db)
+            db, final_path = ("", os.path.join(os.path.expanduser("~"), "ox-db", ".oxdb"))
 
-        return final_path
+        return db, final_path
 
     def get_doc(self, doc: Optional[str] = None) -> dbDoc:
         """
@@ -210,9 +217,11 @@ class Oxdb:
             bool: True if the database was successfully deleted.
         """
         if (db is None and db_path is None) or (db is not None and db_path is not None):
-            raise ValueError("Either `db` or `db_path` must be provided, but not both.")
+            raise ValueError(
+                "Either `db` or `db_path` must be provided, but not both. Both must not be empty"
+            )
 
-        del_path = self._db_path_validator(db=db, db_path=db_path)
+        db, del_path = self._db_path_validator(db=db, db_path=db_path)
         delete_folder_and_contents(del_path)
 
         if del_path == self.db_path:
@@ -306,7 +315,7 @@ class dbDoc:
         self.doc_name = doc
         self.doc_path = os.path.join(self.db_path, self.doc_name)
         os.makedirs(self.doc_path, exist_ok=True)
-        self.doc_index_path = os.path.join(self.doc_path, self.doc_name + ".index")
+        self.doc_index_path = os.path.join(self.doc_path, self.doc_name + "oxdb.index")
 
         self.load_index()
         self.data_oxd: OxDoc = self._create_oxd("data.oxd")

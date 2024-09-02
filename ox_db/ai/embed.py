@@ -75,7 +75,7 @@ class VectorModel:
 
 
         Returns:
-            Dict[str, List]: A dictionary containing the indices, similarity scores, document data, and embeddings of the top results.
+            dict[str, List]: A dictionary containing the indices, similarity scores, document data, and embeddings of the top results.
         """
         # Validate the search method
         if by not in SIM_FORMAT:
