@@ -88,7 +88,7 @@ python -m ox_db.shell.log
 ## code snippet :
 
 ```py
-from ox_db.core import Oxdb
+from oxdb.core import Oxdb
 
 # init disk persisted vectore database
 db=Oxdb("noteDB")
@@ -199,15 +199,15 @@ api_key = os.getenv("OXDB_API_KEY")
 ## directory tree :
 
 ```tree
-.
+oxdb
 ├── __init__.py
 ├── ai
 │   ├── __init__.py
-│   └── vector.py
+│   └── embed.py
 ├── client
 │   ├── __init__.py
 │   └── log.py
-├── db
+├── core
 │   ├── __init__.py
 │   ├── log.py
 │   └── types.py
@@ -217,8 +217,10 @@ api_key = os.getenv("OXDB_API_KEY")
 ├── settings.py
 ├── shell
 │   ├── __init__.py
+│   ├── cli.py
 │   └── log.py
 └── utils
     ├── __init__.py
     └── dp.py
+
 ```
