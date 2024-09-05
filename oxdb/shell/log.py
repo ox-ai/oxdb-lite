@@ -4,10 +4,8 @@ OxdbShell
 """
 
 from pprint import pprint
-import sys
 from typing import Any
 
-from ox_db.db.log import Oxdb
 
 COMMAND_MAPPING = {
     "oxdb.info": "oxdb.info()",
@@ -112,7 +110,7 @@ class OxdbShell:
 
         return shell_command
 
-    def run(self, shell_commands: str,terminal_execution=False):
+    def run(self, shell_commands: str, terminal_execution=False):
         shell_res = []
         commands = shell_commands.split("||")
         for command in commands:
@@ -133,29 +131,8 @@ class OxdbShell:
                 db_responce = False
 
             shell_res.append({"db_result": db_result, "db_responce": db_responce})
-            if terminal_execution :
+            if terminal_execution:
                 print("oxdb : ")
                 pprint(db_result)
 
         return shell_res
-
-
-def main():
-    oxdb = Oxdb("hosted")  # Replace with actual Oxdb initialization
-    oxdb_shell = OxdbShell(oxdb)
-
-    if len(sys.argv) > 1:
-        shell_commands = " ".join(sys.argv[1:])
-        oxdb_shell.run(shell_commands,terminal_execution=True)
-    else:
-        while True:
-            try:
-                shell_commands = input("oxdb> ")
-                oxdb_shell.run(shell_commands,terminal_execution=True)
-            except (KeyboardInterrupt, EOFError):
-                print("\nExiting shell...")
-                break
-
-
-if __name__ == "__main__":
-    main()

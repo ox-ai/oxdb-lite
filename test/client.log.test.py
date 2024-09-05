@@ -1,5 +1,5 @@
 
-from ox_db.client.log import Oxdb
+from oxdb.client.log import Oxdb
 
 # Initialize the Oxdb client
 client = Oxdb(base_url="http://localhost:8000", db_name="noteDB", api_key="ox-db-prime")

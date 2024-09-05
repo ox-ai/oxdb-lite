@@ -1,3 +1,0 @@
-mbedding_model = [
-
-]

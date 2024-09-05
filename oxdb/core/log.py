@@ -6,12 +6,13 @@ import os
 from datetime import datetime
 from typing import Dict, ForwardRef, Union, List, Optional, Any
 
-from ox_doc.ld import OxDoc
-from ox_doc.data_process import Chunk
+from oxdoc.db import Oxdld
+from oxdoc.data_process import Chunk
 
-from ox_db.db.types import embd, hids, DOCFILE_LIST
-from ox_db.ai.embed import VectorModel, SIM_FORMAT
-from ox_db.utils.dp import (
+from oxdb.core.types import embd, hids, DOCFILE_LIST
+from oxdb.ai.embed import VectorModel, SIM_FORMAT
+from oxdb.settings import DATA_CHUNK_METHOD
+from oxdb.utils.dp import (
     delete_folder_and_contents,
     gen_hid,
     get_immediate_subdirectories,
@@ -21,7 +22,7 @@ from ox_db.utils.dp import (
 
 dbDoc = ForwardRef("dbDoc")
 Default_vec_model = VectorModel()
-chunk = Chunk()
+chunk = Chunk(method=DATA_CHUNK_METHOD)
 
 
 class Oxdb:
@@ -180,6 +181,8 @@ class Oxdb:
                 if not self.doc.doc_index:
                     self.del_doc(doc)
                 else:
+                    self.doc.data_oxd.compact()
+                    self.doc.vec_oxd.compact()
                     is_db_empty = False
             if is_db_empty:
                 self.del_db(db_path=self.db_path)
@@ -318,20 +321,20 @@ class dbDoc:
         self.doc_index_path = os.path.join(self.doc_path, self.doc_name + "oxdb.index")
 
         self.load_index()
-        self.data_oxd: OxDoc = self._create_oxd("data.oxd")
-        self.vec_oxd: OxDoc = self._create_oxd("vec.oxd")
+        self.data_oxd: Oxdld = self._load_oxdld("data.oxdld")
+        self.vec_oxd: Oxdld = self._load_oxdld("vec.oxdld")
         self.doc_reg["vec_model"] = self.vec.md_name
         self.save_index()
 
-    def _create_oxd(self, oxd_doc_name: str) -> OxDoc:
+    def _load_oxdld(self, oxd_doc_name: str) -> Oxdld:
         """
-        Creates an OxDoc instance for the given document name.
+        Creates an Oxdld instance for the given document name.
 
         Args:
             oxd_doc_name (str): The name of the .oxd document to create.
 
         Returns:
-            OxDoc: An instance of the OxDoc class representing the .oxd document.
+            Oxdld: An instance of the Oxdld class representing the .oxd document.
 
         Raises:
             ValueError: If the .oxd document name is invalid.
@@ -340,7 +343,7 @@ class dbDoc:
             raise ValueError("The .oxd document name cannot be empty.")
 
         oxd_doc_path = os.path.join(self.doc_path, oxd_doc_name)
-        return OxDoc(oxd_doc_path)
+        return Oxdld(oxd_doc_path)
 
     def get_doc_name(self) -> str:
         """
@@ -572,7 +575,7 @@ class dbDoc:
             ValueError: If `docfile` is not a valid subfile within the document.
         """
         log_entries: Dict[str, Any] = {}
-        content: Union[Dict[str, Any], OxDoc] = {}
+        content: Union[Dict[str, Any], Oxdld] = {}
 
         # Validate the `docfile` argument
         if docfile not in DOCFILE_LIST:

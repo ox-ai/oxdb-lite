@@ -1,7 +1,7 @@
 import requests
 from typing import Any, Dict, ForwardRef, Optional, List, Union
 
-from ox_db.db.types import DOCFILE_LIST
+from oxdb.core.types import DOCFILE_LIST
 
 dbDoc = ForwardRef("dbDoc")
 

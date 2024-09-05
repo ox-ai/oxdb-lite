@@ -1,4 +1,4 @@
-from ox_db.shell.log import OxdbShell
+from oxdb.shell.log import OxdbShell
 
 
 def run(shell_command):

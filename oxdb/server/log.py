@@ -11,10 +11,10 @@ from fastapi import FastAPI, HTTPException, Header, Depends, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 
 
-from ox_db.db.log import Oxdb
-from ox_db.db.types import PullModel, PushModel, SearchModel
-from ox_db.shell.log import OxdbShell
-from ox_db.utils.dp import get_local_ip
+from oxdb.core.log import Oxdb
+from oxdb.core.types import PullModel, PushModel, SearchModel
+from oxdb.shell.log import OxdbShell
+from oxdb.utils.dp import get_local_ip
 
 # from ox_db.server import assets
 
@@ -119,10 +119,10 @@ def source_app():
     return app
 
 
-def run_server(
-    app_source="ox_db.server.log:app",
+def run(
+    app_source="oxdb.server.log:app",
     apikey=None,
-    reload=True,
+    reload=False,
     host=None,
     port=8000,
     **kwargs,
@@ -144,7 +144,7 @@ def run_server(
     uvicorn.run(app_source, reload=reload, host=host, port=port, **kwargs)
 
 
-def main(app_source="ox_db.server.log:app"):
+def main(app_source="oxdb.server.log:app"):
     parser = argparse.ArgumentParser(description="Run the OxDB FastAPI server.")
     parser.add_argument(
         "--host", nargs="?", const=True, default=None, help="Host address"
@@ -155,7 +155,7 @@ def main(app_source="ox_db.server.log:app"):
 
     args = parser.parse_args()
 
-    run_server(
+    run(
         app_source,
         host=args.host,
         port=args.port,

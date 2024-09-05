@@ -88,7 +88,7 @@ python -m ox_db.shell.log
 ## code snippet :
 
 ```py
-from ox_db.db.log import Oxdb
+from ox_db.core import Oxdb
 
 # init disk persisted vectore database
 db=Oxdb("noteDB")
@@ -99,13 +99,12 @@ log = db.get_doc("note-doc")
 # can push data by single line cmd
 log.push("data-1")
 # can add uid or uuids and additional metadata
-log.push(data="need to implement pdfsearch db",uid="",metadata={"note-type" :"project-note","org":"ox-ai"})
+log.push(data="need to implement pdfsearch db",uid="uuid",metadata={"note-type" :"project-note","org":"ox-ai"})
 # support different data types
 log.push(datax ={"datas":["project-queue","priority is db" ]})
 
 # can retrive data by metadata filters or string search
 log.pull(uid="projects")
-
 
 # can also apply metadata filers, search string, and all other query methods methods
 log.search("data",2)
@@ -123,7 +122,6 @@ log.search(query="project plan",topn=2,by="ed",where={"org":"ox-ai"},where_data=
 {'entries': 2,
  'data': ['need to implement pdfsearch db',
           'need to implement pdfsearch db with ui'],
- 'entries': 2,
  'sim_score': [1.343401897402224, 1.3484805614337063]}
 
 ```

@@ -17,7 +17,7 @@ oxdb.doc.search(**data)
 # db.log
 
 ```py
-from ox_db.db.log import Oxdb
+from ox_db.core import Oxdb
 
 # init disk persisted vectore database
 db=Oxdb("noteDB")

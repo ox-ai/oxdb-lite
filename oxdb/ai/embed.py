@@ -2,6 +2,8 @@ from typing import List, Optional, Dict
 from ox_onnx.runtime import OnnxModel
 import numpy as np
 
+from oxdb.settings import EMBEDDING_MODEL
+
 SIM_FORMAT = ["dp", "ed", "cs"]
 
 class VectorModel:
@@ -9,7 +11,7 @@ class VectorModel:
         """
         Initializes the Model class with the default sentence transformer model.
         """
-        self.md_name = "sentence-transformers/all-MiniLM-L6-v2"
+        self.md_name = EMBEDDING_MODEL
         self.model = OnnxModel.load(self.md_name)
 
     def load(self, md_name: str):
