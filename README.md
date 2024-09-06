@@ -30,7 +30,7 @@ pip install ox-db
 
 ## ox-db
 
-- refere [test.log.ipynb](./test.log.ipynb) and [docs.db.log](./docs/db.log.md) for understanding the underlying usage
+- refere [test.log.ipynb](./test.log.ipynb) and [docs.core.log](./docs/db.log.md) for understanding the underlying usage
 
 ## db access interfaces :
 
@@ -74,14 +74,14 @@ oxdb.shell 'search("data")'
 - if path not correctly assigned due too sudo or admin access use below cmd
 
 ```bash
-python -m ox_db.shell.log
+python -m oxdb.shell
 ```
 
 ## ox-db core
 
 ### db core interface :
 
-- to directly work with ox-db use code `Oxdb form ox_db.db.log`
+- to directly work with ox-db use code `Oxdb form ox_db.core.log`
 - direct access gives lot of low level api access for inspecting the db
 - refere [db.log](./docs/db.log.md)
 
@@ -143,7 +143,7 @@ oxdb.server --apikey "your-api-key" --host --port 8008
 - if path not correctly assigned due to sudo or admin access use below cmd
 
 ```bash
-python -m ox_db.server.log --apikey "hi0x" --host --port 8008
+python -m oxdb.server --apikey "hi0x" --host --port 8008
 ```
 
 ### To set api key in environment variable
@@ -200,6 +200,7 @@ api_key = os.getenv("OXDB_API_KEY")
 
 ```tree
 oxdb
+.
 ├── __init__.py
 ├── ai
 │   ├── __init__.py
@@ -213,14 +214,17 @@ oxdb
 │   └── types.py
 ├── server
 │   ├── __init__.py
+│   ├── __main__.py
 │   └── log.py
 ├── settings.py
 ├── shell
 │   ├── __init__.py
+│   ├── __main__.py
 │   ├── cli.py
 │   └── log.py
 └── utils
     ├── __init__.py
     └── dp.py
+
 
 ```

@@ -4,8 +4,8 @@ from oxdb.shell.log import OxdbShell
 
 
 def main():
-    oxdb = Oxdb("hosted")  # Replace with actual Oxdb initialization
-    oxdb_shell = OxdbShell(oxdb)
+    db = Oxdb("hosted")  # Replace with actual Oxdb initialization
+    oxdb_shell = OxdbShell(db)
 
     if len(sys.argv) > 1:
         shell_commands = " ".join(sys.argv[1:])
@@ -17,6 +17,9 @@ def main():
                 oxdb_shell.run(shell_commands, terminal_execution=True)
             except (KeyboardInterrupt, EOFError):
                 print("\nExiting shell...")
+                print("Initiating Clean Up")
+                db.clean_up()
+                print("Clean Up Compelete")
                 break
 
 

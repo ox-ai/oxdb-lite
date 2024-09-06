@@ -140,8 +140,16 @@ def run(
     API_KEY = os.getenv("OXDB_API_KEY")
 
     # Print the host to verify the behavior
-    print(f"Host: {host} port: {port} apikey: {API_KEY} reload: {reload}")
-    uvicorn.run(app_source, reload=reload, host=host, port=port, **kwargs)
+    print(f"\nHost: {host} port: {port} apikey: {API_KEY} reload: {reload}  \n\n")
+    try:
+        uvicorn.run(app_source, reload=reload, host=host, port=port, **kwargs)
+    except (Exception,KeyboardInterrupt, EOFError) as e:
+ 
+        print("\nExiting server.....")
+        print("Initiating Clean Up")
+        db.clean_up()
+        print("Clean Up Compelete")
+   
 
 
 def main(app_source="oxdb.server.log:app"):

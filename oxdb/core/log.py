@@ -7,11 +7,11 @@ from datetime import datetime
 from typing import Dict, ForwardRef, Union, List, Optional, Any
 
 from oxdoc.db import Oxdld
-from oxdoc.data_process import Chunk
+from oxdoc.dp import DBin
 
 from oxdb.core.types import embd, hids, DOCFILE_LIST
 from oxdb.ai.embed import VectorModel, SIM_FORMAT
-from oxdb.settings import DATA_CHUNK_METHOD
+from oxdb.settings import DBIN_METHOD
 from oxdb.utils.dp import (
     delete_folder_and_contents,
     gen_hid,
@@ -22,7 +22,7 @@ from oxdb.utils.dp import (
 
 dbDoc = ForwardRef("dbDoc")
 Default_vec_model = VectorModel()
-chunk = Chunk(method=DATA_CHUNK_METHOD)
+dbin = DBin(method=DBIN_METHOD)
 
 
 class Oxdb:
@@ -318,7 +318,7 @@ class dbDoc:
         self.doc_name = doc
         self.doc_path = os.path.join(self.db_path, self.doc_name)
         os.makedirs(self.doc_path, exist_ok=True)
-        self.doc_index_path = os.path.join(self.doc_path, self.doc_name + "oxdb.index")
+        self.doc_index_path = os.path.join(self.doc_path, self.doc_name + ".oxdb.index")
 
         self.load_index()
         self.data_oxd: Oxdld = self._load_oxdld("data.oxdld")
@@ -812,7 +812,7 @@ class dbDoc:
             with open(self.doc_index_path, "rb+") as file:
                 file_content = file.read()
                 if file_content:
-                    content = chunk.decode_all(file_content)[0]
+                    content = dbin.decode(file_content)
                 else:
                     content = {}
                 self.doc_reg = content.get("doc_reg", {"entry": 0})
@@ -836,7 +836,7 @@ class dbDoc:
         def write_file(file, content) -> None:
             file.seek(0)
             file.truncate()
-            file.write(chunk.encode(content))
+            file.write(dbin.encode(content))
 
         try:
             mode = "rb+"

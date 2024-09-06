@@ -23,8 +23,7 @@ class OxdbClient:
         self.db_name = db_name
         self.headers = {"x-api-key": api_key, "Content-Type": "application/json"}
 
-
-    def alive(self)->dict:
+    def alive(self) -> dict:
         """
         Returns the status of the Oxdb server.
 
@@ -72,7 +71,6 @@ class dbDoc:
         self.base_url = base_url
         self.doc_name = doc_name
         self.headers = headers
-
 
     def get_doc(self, doc: str) -> dict:
         """

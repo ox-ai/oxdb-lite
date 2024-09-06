@@ -2,7 +2,7 @@
 
 ```py
 
-from ox_db.client import OxdbClient
+from oxdb.client import OxdbClient
 
 # Initialize the Oxdb client
 client = OxdbClient(base_url="http://localhost:8000", db_name="noteDB", api_key="ox-db-prime")
