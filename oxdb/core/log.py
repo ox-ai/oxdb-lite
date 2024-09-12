@@ -93,7 +93,7 @@ class Oxdb:
             raise ValueError(
                 "Either `db` or `db_path` must be provided, but not both. Both must not be empty"
             )
-        
+
         if db_path:
             dir_name = os.path.basename(db_path)
             db = dir_name.split(".oxdb")[0] if dir_name.endswith(".oxdb") else dir_name
@@ -102,16 +102,22 @@ class Oxdb:
             db = db.split(".oxdb")[0] if db.endswith(".oxdb") else db
             final_path = os.path.join(os.path.expanduser("~"), "ox-db", db + ".oxdb")
         else:
-            db, final_path = ("", os.path.join(os.path.expanduser("~"), "ox-db", ".oxdb"))
+            db, final_path = (
+                "",
+                os.path.join(os.path.expanduser("~"), "ox-db", ".oxdb"),
+            )
 
         return db, final_path
 
-    def get_doc(self, doc: Optional[str] = None) -> dbDoc:
+    def get_doc(
+        self, doc: Optional[str] = None, time_log: Optional[bool] = False
+    ) -> dbDoc:
         """
         Returns an instance of the dbDoc class, connecting it to the database.
 
         Args:
             doc (Optional[str], optional): The document name. Defaults to None.
+            time_log (Optional[bool], optional): The time as doc name. Defaults to False.
 
         Returns:
             dbDoc: An instance of the dbDoc class.
@@ -251,14 +257,20 @@ class Oxdb:
 
 
 class dbDoc:
-    def __init__(self, doc: Optional[str] = None):
+    def __init__(self, doc: Optional[str] = None, time_log: Optional[bool] = False):
         """
         Initializes an instance of the dbDoc class, representing a document handler or pointer object.
 
         Args:
             doc (Optional[str], optional): The name of the document. Defaults to a timestamped name if not provided.
+            time_log (Optional[bool], optional): The time as doc name. Defaults to False.
         """
-        self.doc_name: str = doc or "log-" + datetime.now().strftime("[%d_%m_%Y]")
+        default_doc = (
+            "log-doc"
+            if not time_log
+            else "log-doc" + datetime.now().strftime("[%d-%m-%Y]")
+        )
+        self.doc_name: str = doc or default_doc
         self.db_path: Optional[str] = None
         self.vec: VectorModel = None
         self.doc_path: Optional[str] = None
@@ -378,6 +390,7 @@ class dbDoc:
         description: Optional[Union[str, list[str]]] = None,
         metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
         embeddings: Optional[Union[bool, list[list[int]]]] = True,
+        log_time:Optional[bool] = False,
         **kwargs,
     ) -> list[str]:
         """
@@ -393,6 +406,7 @@ class dbDoc:
                 Defaults to None.
             embeddings (Optional[Union[bool, List[List[int]]]], optional): If True, embeddings are generated for the data.
                 If a list of embeddings is provided, they will be used instead. Defaults to True.
+            log_time (Optional[bool,optional]) if need to include time and date as metadata then True,Defaults to False
         Returns:
             list[str]: A list of unique IDs for the log entries.
 
@@ -456,9 +470,11 @@ class dbDoc:
             index_metadata: Dict[str, Any] = {
                 # "uid": uid_list[i] or "uid",
                 "doc": doc,
-                "time": datetime.now().strftime("%H:%M:%S"),
-                "date": datetime.now().strftime("%d-%m-%Y"),
             }
+            if log_time:
+                index_metadata["time"] = datetime.now().strftime("%H:%M:%S")
+                index_metadata["date"] = datetime.now().strftime("%d-%m-%Y")
+
             if uid_list[i]:
                 index_metadata["uid"] = uid_list[i]
 
