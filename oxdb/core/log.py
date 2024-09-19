@@ -190,7 +190,7 @@ class Oxdb:
                     self.doc.data_oxd.compact()
                     self.doc.vec_oxd.compact()
                     is_db_empty = False
-            if is_db_empty:
+            if is_db_empty and self.db_path!=db_path:
                 self.del_db(db_path=self.db_path)
 
         return True

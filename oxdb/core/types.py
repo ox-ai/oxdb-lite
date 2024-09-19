@@ -1,9 +1,11 @@
-from typing import Any, Dict, List, Optional, TypeAlias, Union
+from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, model_validator, Field
 
 # Type Alias for uid, hid, or date queries
-embd: TypeAlias = Optional[Union[str, List[Any], bool, None]]
-hids: TypeAlias = Optional[Union[str, List[str], None]]
+# embd: TypeAlias = Optional[Union[str, List[Any], bool, None]]
+# hids: TypeAlias = Optional[Union[str, List[str], None]]
+embd = Optional[Union[str, List[Any], bool, None]]
+hids = Optional[Union[str, List[str], None]]
 
 DOCFILE_LIST = ["data.oxd", "vec.oxd", ".index"]
 

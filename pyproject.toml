@@ -1,0 +1,58 @@
+[project]
+name = "ox-db"
+version = "0.0.1"
+# dynamic = ["version"]
+
+authors = [
+  { name = "Lokeshwaran M", email = "Lokeshwaran.m23072003@gmail.com" }
+]
+description = "An OX-AI db"
+keywords = ["ox-db","ox-ai"]
+readme = "README.md"
+license = "LICENSE"
+requires-python = ">=3.8"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+]
+
+dependencies = [
+"fastapi",
+"numpy",
+"pydantic",
+"Requests",
+"setuptools",
+"uvicorn",
+"ox-doc @ git+https://github.com/ox-ai/ox-doc.git#egg=ox-doc",
+"ox-onnx @ git+https://github.com/ox-ai/ox-onnx.git#egg=ox-onnxa",
+]
+
+[project.scripts]
+oxdb.shell = "oxdb.shell.cli:main"
+oxdb.server = "oxdb.server.log:main"
+
+[project.urls]
+"Homepage" = "https://github.com/ox-ai/ox-db"
+"Bug Tracker" = "https://github.com/ox-ai/ox-db/issues"
+
+[build-system]
+requires = ["setuptools>=61.0","wheel", "setuptools-git-versioning", "setuptools_scm[toml]"]
+build-backend = "setuptools.build_meta"
+
+#[tool.setuptools_scm]
+#local_scheme = "no-local-version"
+
+[tool.setuptools]
+packages = ["ox-db"]
+include_package_data =  true
+#packages.find.include = []
+
+[tool.setuptools.package-data]
+#oxdb = ["*.yml"]
+""= ["requirements.txt","README.md"]
+
+
+
+
+
+

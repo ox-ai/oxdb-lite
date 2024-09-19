@@ -180,3 +180,4 @@ build/
 *.oxd.zip
 
 ignore.*
+*.ignore
