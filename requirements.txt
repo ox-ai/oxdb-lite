@@ -1,7 +1,7 @@
 fastapi
 numpy
 pydantic
-Requests
+requests
 setuptools
 uvicorn
 ox-doc @ git+https://github.com/ox-ai/ox-doc.git#egg=ox-doc

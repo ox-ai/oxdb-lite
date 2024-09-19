@@ -9,7 +9,7 @@ authors = [
 description = "An OX-AI db"
 keywords = ["ox-db","ox-ai"]
 readme = "README.md"
-license = "LICENSE"
+license = { file = "LICENSE" }
 requires-python = ">=3.8"
 classifiers = [
   "Programming Language :: Python :: 3",
@@ -20,7 +20,7 @@ dependencies = [
 "fastapi",
 "numpy",
 "pydantic",
-"Requests",
+"requests",
 "setuptools",
 "uvicorn",
 "ox-doc @ git+https://github.com/ox-ai/ox-doc.git#egg=ox-doc",
@@ -28,8 +28,8 @@ dependencies = [
 ]
 
 [project.scripts]
-oxdb.shell = "oxdb.shell.cli:main"
-oxdb.server = "oxdb.server.log:main"
+"oxdb.shell" = "oxdb.shell.cli:main"
+"oxdb.server" = "oxdb.server.log:main"
 
 [project.urls]
 "Homepage" = "https://github.com/ox-ai/ox-db"
@@ -42,15 +42,13 @@ build-backend = "setuptools.build_meta"
 #[tool.setuptools_scm]
 #local_scheme = "no-local-version"
 
-[tool.setuptools]
-packages = ["ox-db"]
-include_package_data =  true
+#[tool.setuptools]
+#packages = ["ox-db"]
+#include_package_data = false
 #packages.find.include = []
 
-[tool.setuptools.package-data]
-#oxdb = ["*.yml"]
-""= ["requirements.txt","README.md"]
-
+#[tool.setuptools.package-data]
+#"ox-db" = ["requirements.txt"]
 
 
 
