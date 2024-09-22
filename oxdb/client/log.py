@@ -128,7 +128,6 @@ class dbDoc:
             "data": data,
             "datax": datax,
             "embeddings": embeddings,
-            "description": description,
             "metadata": metadata,
             "uid": uid,
         }
@@ -138,7 +137,7 @@ class dbDoc:
 
     def pull(
         self,
-        hid: Optional[Union[str, List[str]]] = None,
+        idx: Optional[Union[str, List[str]]] = None,
         uid: Optional[str] = None,
         time: Optional[str] = None,
         date: Optional[str] = None,
@@ -152,7 +151,7 @@ class dbDoc:
         Retrieves log entries based on unique ID, uid, time, date, or additional filter criteria.
 
         Args:
-            hid (Optional[hids], optional): The unique ID(s) of the log entry. Defaults to None.
+            idx (Optional[idxs], optional): The unique ID(s) of the log entry. Defaults to None.
             uid (Optional[str], optional): The uid of the log entry. Defaults to None.
             time (Optional[str], optional): The time of the log entry. Defaults to None.
             date (Optional[str], optional): The date of the log entry. Defaults to None.
@@ -181,7 +180,7 @@ class dbDoc:
 
         url = f"{self.base_url}/pull"
         payload = {
-            "hid": hid,
+            "idx": idx,
             "uid": uid,
             "time": time,
             "date": date,
@@ -200,7 +199,7 @@ class dbDoc:
         query: str,
         topn: int = 10,
         by: Optional[str] = "dp",
-        hid: Optional[List[str]] = None,
+        idx: Optional[List[str]] = None,
         uid: Optional[str] = None,
         time: Optional[str] = None,
         date: Optional[str] = None,
@@ -221,13 +220,13 @@ class dbDoc:
                 - "dp": Dot Product (default)
                 - "ed": Euclidean Distance
                 - "cs": Cosine Similarity
-            hid (Optional[hids], optional): The unique ID(s) of the log entry. Defaults to None.
+            idx (Optional[idxs], optional): The unique ID(s) of the log entry. Defaults to None.
             uid (Optional[str], optional): The uid of the log entry. Defaults to None.
             time (Optional[str], optional): The time of the log entry. Defaults to None.
             date (Optional[str], optional): The date of the log entry. Defaults to None.
             where (Optional[Dict[str, Any]], optional): Additional metadata filter criteria for the log entry. Defaults to None.
             where_data (Optional[Dict[str, Any]], optional): Data filter criteria, such as a specific search string within the log entries. Defaults to None.
-            includes (Optional[List[str]], optional): Fields to include in the search results. Defaults to ["hid", "data", "description"].
+            includes (Optional[List[str]], optional): Fields to include in the search results. Defaults to ["idx", "data", "description"].
             search_all_filter (Optional[bool], optional): Whether to apply all filters across all entries. Defaults to False.
             apply_filter_last (Optional[bool], optional): Whether to apply filters after vector search. Defaults to False.
             where_data_before_vec_search (Optional[bool], optional): Whether to apply `where_data` filter before performing vector search. Defaults to False.
@@ -243,7 +242,7 @@ class dbDoc:
             "query": query,
             "topn": topn,
             "by": by,
-            "hid": hid,
+            "idx": idx,
             "uid": uid,
             "time": time,
             "date": date,

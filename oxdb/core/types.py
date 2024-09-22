@@ -1,11 +1,12 @@
 from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, model_validator, Field
 
-# Type Alias for uid, hid, or date queries
+# Type Alias for uid, idx, or date queries
 # embd: TypeAlias = Optional[Union[str, List[Any], bool, None]]
-# hids: TypeAlias = Optional[Union[str, List[str], None]]
+# idxs: TypeAlias = Optional[Union[str, List[str], None]]
 embd = Optional[Union[str, List[Any], bool, None]]
-hids = Optional[Union[str, List[str], None]]
+idxs = Optional[Union[str, List[str], None]]
+idxdata = Optional[Union[int,str,List[int],List[str],None] ]
 
 DOCFILE_LIST = ["data.oxd", "vec.oxd", ".index"]
 
@@ -21,9 +22,6 @@ class PushModel(BaseModel):
     embeddings: Optional[Union[bool, List[List[int]]]] = Field(
         True,
         description="If True, embeddings are generated for the data. If a list of embeddings is provided, they will be used instead.",
-    )
-    description: Optional[Union[str, List[str]]] = Field(
-        None, description="A description related to the data."
     )
     metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = Field(
         None, description="Additional metadata related to the data."
@@ -56,11 +54,11 @@ class PushModel(BaseModel):
 
 
 class PushResponseModel(BaseModel):
-    hid: list[str] = Field(..., description="The unique ID of the log entry.")
+    idx: idxdata = Field(..., description="The unique ID of the log entry.")
 
 
 class PullModel(BaseModel):
-    hid: hids = Field(None, description="The unique ID(s) of the log entry.")
+    idx: idxs = Field(None, description="The unique ID(s) of the log entry.")
     uid: Optional[str] = Field(None, description="The uid of the log entry.")
     time: Optional[str] = Field(None, description="The time of the log entry.")
     date: Optional[str] = Field(None, description="The date of the log entry.")
@@ -87,8 +85,8 @@ class PullResponseModel(BaseModel):
     )
 
 
-class PullHIDModel(BaseModel):
-    hids: List[str] = Field(
+class PullidxModel(BaseModel):
+    idxs: idxdata = Field(
         ...,
         description="A list of unique IDs representing the log entries to retrieve.",
     )
@@ -100,10 +98,10 @@ class PullHIDModel(BaseModel):
     )
 
 
-class PullHIDResponseModel(BaseModel):
+class PullidxResponseModel(BaseModel):
     log_entries: Dict[str, Any] = Field(
         ...,
-        description="A dictionary containing the log entries that match the given `hids`.",
+        description="A dictionary containing the log entries that match the given `idxs`.",
     )
 
 
@@ -114,7 +112,7 @@ class SearchModel(BaseModel):
     by: Optional[str] = Field(
         "dp", description="The search method. Must be one of ['dp', 'ed', 'cs']."
     )
-    hid: Optional[Union[str, List[str]]] = Field(
+    idx: Optional[Union[str, List[str]]] = Field(
         None, description="The unique ID(s) of the log entry."
     )
     uid: Optional[str] = Field(None, description="The uid of the log entry.")
@@ -143,11 +141,8 @@ class SearchModel(BaseModel):
 
 class SearchResponseModel(BaseModel):
     entries: int = Field(..., description="Number of entries found.")
-    hid: List[str] = Field(..., description="List of hids for the matched entries.")
+    idx: List[str] = Field(..., description="List of idxs for the matched entries.")
     data: List[Any] = Field(..., description="List of data for the matched entries.")
-    description: List[Any] = Field(
-        ..., description="List of descriptions for the matched entries."
-    )
     sim_score: List[float] = Field(
         ..., description="List of similarity scores for the matched entries."
     )

@@ -2,16 +2,16 @@ from typing import List, Optional, Dict
 from ox_onnx.runtime import OnnxModel
 import numpy as np
 
-from oxdb.settings import EMBEDDING_MODEL
+from oxdb.settings import settings
 
-SIM_FORMAT = ["dp", "ed", "cs"]
+
 
 class VectorModel:
     def __init__(self) -> None:
         """
         Initializes the Model class with the default sentence transformer model.
         """
-        self.md_name = EMBEDDING_MODEL
+        self.md_name = settings.EMBEDDING_MODEL
         self.model = OnnxModel.load(self.md_name)
 
     def load(self, md_name: str):
@@ -60,7 +60,7 @@ class VectorModel:
         """
         return self.model.decode(encoded_data)
 
-    def search(self, query: str,  data: Optional[List[str]] = [],embeds: Optional[List[List[int]]] = [], by: Optional[str] = "dp",include : Optional[List[str]]=[]) -> Dict[str, List]:
+    def search(self, query: str,  data: Optional[List[str]] = [],embeds: Optional[List[List[int]]] = [], by: Optional[str] = settings.SIM_FORMAT,include : Optional[List[str]]=[]) -> Dict[str, List]:
         """
         Searches for the most similar documents to the query based on the specified similarity metric.
 
@@ -80,8 +80,8 @@ class VectorModel:
             dict[str, List]: A dictionary containing the indices, similarity scores, document data, and embeddings of the top results.
         """
         # Validate the search method
-        if by not in SIM_FORMAT:
-            raise ValueError(f"Invalid search method '{by}'. Must be one of {SIM_FORMAT}.")
+        if by not in settings.SIM_FORMATS:
+            raise ValueError(f"Invalid search method '{by}'. Must be one of {settings.SIM_FORMATS}.")
 
         # Generate embeddings for the query
         query_embed = np.array(self.generate([query]))[0]
@@ -127,7 +127,7 @@ class VectorModel:
         }
 
     @staticmethod
-    def sim( veca, vecb, sim_format: Optional[str] = "dp"):
+    def sim( veca, vecb, sim_format: Optional[str] = settings.SIM_FORMAT):
         """
         Calculates the similarity between two vectors based on the specified format.
 
@@ -142,9 +142,9 @@ class VectorModel:
         Returns:
             The similarity value between the two vectors based on the chosen format.
         """
-        if sim_format not in SIM_FORMAT:
+        if sim_format not in settings.SIM_FORMATS:
             raise ValueError(
-                f"ox-db: sim_format should be one of {SIM_FORMAT}, not {sim_format}"
+                f"ox-db: sim_format should be one of {settings.SIM_FORMATS}, not {sim_format}"
             )
 
         veca = np.array(veca)

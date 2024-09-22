@@ -77,6 +77,20 @@ def strorlist_to_list(arg: Union[str, List[str]]) -> List[List[str]]:
     """
     return [arg] if isinstance(arg, str) else arg or []
 
+def intorstrorlist_to_liststr(arg: Union[str, List[str]]) -> List[List[str]]:
+    """
+    Converts input arguments to lists if they are strings else list or None
+
+    Args:
+        args (Union[str, List[str]]): The input arguments.
+
+    Returns:
+        List[List[str]]: The converted arguments. or None
+    """
+    return [int(arg)] if isinstance(arg, int) or isinstance(arg, str)  else arg or []
+
+intorstrorlist_to_liststr
+
 
 def get_immediate_subdirectories(path: str):
     """Returns a list of immediate subdirectories in the given path."""
@@ -122,3 +136,53 @@ def get_local_ip():
         s.close()
     
     return local_ip
+
+
+class UIDX:
+
+    def __init__(self, uidxs):
+        # Normalize all items in uidxs to integers, but store original types
+        self.uidxs = set(self._to_int(uidx) for uidx in uidxs)
+        self.dellist = []
+        self.max_uidx = max(self.uidxs) if self.uidxs else 0
+        self.original_is_str = all(isinstance(uidx, str) for uidx in uidxs)
+
+    def _to_int(self, uidx):
+        # Convert uidx to an integer for comparison
+        return int(uidx) if isinstance(uidx, str) else uidx
+
+    def _to_original_type(self, uidx):
+        # Convert uidx back to its original type if needed
+        return str(uidx) if self.original_is_str else uidx
+
+    def gen(self):
+        # Return the last uidxber from dellist if available
+        if self.dellist:
+            return self._to_original_type(self.dellist.pop())
+        else:
+            # Increment the max uidxber and return it
+            self.max_uidx += 1
+            self.uidxs.add(self.max_uidx)
+            return self._to_original_type(self.max_uidx)
+
+    def delete(self, uidx):
+        # Handle single str, int or list of them
+        if isinstance(uidx, list):
+            # Convert list of uidx to integers and delete each
+            for n in uidx:
+                self._delete_single(n)
+        else:
+            # Handle single uidxber
+            self._delete_single(uidx)
+
+    def _delete_single(self, uidx):
+        """Internal method to delete a single uidxber."""
+        uidx = self._to_int(uidx)  # Ensure it's treated as an integer
+        if uidx in self.uidxs:
+            self.uidxs.remove(uidx)
+            self.dellist.append(uidx)
+
+    def __len__(self):
+        # Return the count of available uidx (excluding dellist)
+        return len(self.uidxs)
+

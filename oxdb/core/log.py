@@ -6,13 +6,14 @@ import os
 from datetime import datetime
 from typing import Dict, ForwardRef, Union, List, Optional, Any
 
-from oxdoc.db import Oxdld
+from oxdoc.db import Oxdld, OxdMem
 from oxdoc.dp import DBin
 
-from oxdb.core.types import embd, hids, DOCFILE_LIST
-from oxdb.ai.embed import VectorModel, SIM_FORMAT
-from oxdb.settings import DBIN_METHOD
+from oxdb.core.types import idxdata, embd, DOCFILE_LIST
+from oxdb.ai.embed import VectorModel
+from oxdb.settings import settings
 from oxdb.utils.dp import (
+    UIDX,
     delete_folder_and_contents,
     gen_hid,
     get_immediate_subdirectories,
@@ -22,7 +23,7 @@ from oxdb.utils.dp import (
 
 dbDoc = ForwardRef("dbDoc")
 Default_vec_model = VectorModel()
-dbin = DBin(method=DBIN_METHOD)
+dbin = DBin(method=settings.DBIN_METHOD)
 
 
 class Oxdb:
@@ -184,13 +185,14 @@ class Oxdb:
             is_db_empty = True
             for doc in self.doc_list:
                 self.get_doc(doc)
-                if not self.doc.doc_index:
+                if not self.doc.data_oxd.index:
                     self.del_doc(doc)
                 else:
+                    self.doc.index_oxd.compact()
                     self.doc.data_oxd.compact()
                     self.doc.vec_oxd.compact()
                     is_db_empty = False
-            if is_db_empty and self.db_path!=db_path:
+            if is_db_empty and self.db_path != db_path:
                 self.del_db(db_path=self.db_path)
 
         return True
@@ -274,8 +276,6 @@ class dbDoc:
         self.db_path: Optional[str] = None
         self.vec: VectorModel = None
         self.doc_path: Optional[str] = None
-        self.doc_index_path: Optional[str] = None
-        self.doc_reg: Dict[str, Any] = {}
 
     def connect_db(self, db_path: str, vec: VectorModel) -> None:
         """
@@ -330,13 +330,28 @@ class dbDoc:
         self.doc_name = doc
         self.doc_path = os.path.join(self.db_path, self.doc_name)
         os.makedirs(self.doc_path, exist_ok=True)
-        self.doc_index_path = os.path.join(self.doc_path, self.doc_name + ".oxdb.index")
 
-        self.load_index()
+        self.index_oxd: Oxdld = self._load_oxdld("index.oxdld")
         self.data_oxd: Oxdld = self._load_oxdld("data.oxdld")
         self.vec_oxd: Oxdld = self._load_oxdld("vec.oxdld")
-        self.doc_reg["vec_model"] = self.vec.md_name
-        self.save_index()
+        idxs = self.data_oxd.keys()
+        self.uidx = UIDX(idxs)
+        self.hid_set = set()
+        for idx in idxs:
+            self.hid_set.add(self.index_oxd[idx]["hid"])
+        self.index_oxd["vec_model"] = self.vec.md_name
+
+    def save_doc(self):
+        # self.index_oxd.save_index
+        # self.data_oxd.save_index
+        # self.vec_oxd.save_index
+        pass
+
+    def __len__(self):
+        return len(self.data_oxd.index)
+
+    def len(self):
+        return len(self.data_oxd.index)
 
     def _load_oxdld(self, oxd_doc_name: str) -> Oxdld:
         """
@@ -378,7 +393,8 @@ class dbDoc:
             "db_path": self.db_path,
             "doc_name": self.doc_name,
             "doc_path": self.doc_path,
-            "doc_reg": self.doc_reg,
+            "doc_entry": self.len(),
+            "vec_model": self.index_oxd["vec_model"],
         }
         return res
 
@@ -387,10 +403,9 @@ class dbDoc:
         data: Optional[Union[List[str], str]] = None,
         datax: Optional[Any] = None,
         uid: Optional[Union[str, list[str]]] = None,
-        description: Optional[Union[str, list[str]]] = None,
         metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
         embeddings: Optional[Union[bool, list[list[int]]]] = True,
-        log_time:Optional[bool] = False,
+        log_time: Optional[bool] = False,
         **kwargs,
     ) -> list[str]:
         """
@@ -401,7 +416,6 @@ class dbDoc:
             data (Optional[Union[List[str], str]], optional): The data to be logged. Must not be empty or None.
             datax (Optional[Any], optional): Additional data that can be converted to a string and logged. Defaults to None.
             uid (Optional[Union[str, List[str]]], optional): A unique ID for each log entry. Defaults to None.
-            description (Optional[Union[str, List[str]]], optional): A description related to the data. Defaults to None.
             metadata (Optional[Union[Dict[str, Any], List[Dict[str, Any]]]], optional): Additional metadata related to the data.
                 Defaults to None.
             embeddings (Optional[Union[bool, List[List[int]]]], optional): If True, embeddings are generated for the data.
@@ -425,9 +439,6 @@ class dbDoc:
         data_list = datax or (data if isinstance(data, list) else [data])
         data_len = len(data_list)
 
-        description_list = (
-            description if isinstance(description, list) else [description] * data_len
-        )
         uid_list = uid if isinstance(uid, list) else [uid] * data_len
         metadata_list = (
             metadata if isinstance(metadata, list) else [metadata] * data_len
@@ -442,34 +453,38 @@ class dbDoc:
             embedding_list = [[]] * data_len
 
         # Ensure all lists are the same length
-        description_list = description_list + [None] * (
-            data_len - len(description_list)
-        )
         uid_list = uid_list + [None] * (data_len - len(uid_list))
         metadata_list = metadata_list + [None] * (data_len - len(metadata_list))
         embedding_list = embedding_list + [[]] * (data_len - len(embedding_list))
 
+        oxd_index_dict = {}
         oxd_embedding_dict = {}
         oxd_data_dict = {}
-        hid_list = []
+        idx_list = []
 
         # Get the document name
         doc: str = self.get_doc_name()
 
         for i in range(data_len):
             hid: str = gen_hid(data_list[i])
-            if hid in self.doc_index:
-                hid_list.append(hid)
-                continue
+            idx = None
+            if hid in self.hid_set:
+
+                for idxi in self.data_oxd.keys():
+                    if hid == self.index_oxd[idxi]["hid"]:
+                        if data_list[i] == self.data_oxd[idxi]:
+                            idx = idxi
+                            break
+
+            if not idx:
+                idx=self.uidx.gen()
+                
 
             # Prepare the document unit and index metadata
-            doc_unit: Dict[str, Any] = {
-                "data": data_list[i],
-                "description": description_list[i],
-            }
             index_metadata: Dict[str, Any] = {
                 # "uid": uid_list[i] or "uid",
                 "doc": doc,
+                "hid": hid,
             }
             if log_time:
                 index_metadata["time"] = datetime.now().strftime("%H:%M:%S")
@@ -478,27 +493,27 @@ class dbDoc:
             if uid_list[i]:
                 index_metadata["uid"] = uid_list[i]
 
-            oxd_embedding_dict[hid] = embedding_list[i]
-            oxd_data_dict[hid] = doc_unit
-
             # Update index metadata with any additional metadata provided
             if metadata_list[i]:
                 index_metadata.update(metadata_list[i])
 
-            # Push the index and data to the corresponding storage
-            self.push_index(hid, index_metadata)
-            hid_list.append(hid)
+            oxd_index_dict[idx] = index_metadata
+            oxd_embedding_dict[idx] = embedding_list[i]
+            oxd_data_dict[idx] = data_list[i]
+
+            idx_list.append(int(idx))
 
         # Add the data and embeddings to the storage
+        self.index_oxd.add(oxd_index_dict)
         self.data_oxd.add(oxd_data_dict)
         self.vec_oxd.add(oxd_embedding_dict)
-        self.save_index()
+        self.save_doc()
 
-        return hid_list
+        return idx_list
 
     def pull(
         self,
-        hid: Optional[hids] = None,
+        idx: idxdata = None,
         uid: Optional[str] = None,
         time: Optional[str] = None,
         date: Optional[str] = None,
@@ -507,12 +522,13 @@ class dbDoc:
         where_data: Optional[Dict[str, Any]] = None,
         search_all_filter: Optional[bool] = False,
         apply_filter: Optional[bool] = True,
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Retrieves log entries based on unique ID, uid, time, date, or additional filter criteria.
 
         Args:
-            hid (Optional[hids], optional): The unique ID(s) of the log entry. Defaults to None.
+            idx (Optional[List[int]], optional): The unique ID(s) of the log entry. Defaults to None.
             uid (Optional[str], optional): The uid of the log entry. Defaults to None.
             time (Optional[str], optional): The time of the log entry. Defaults to None.
             date (Optional[str], optional): The date of the log entry. Defaults to None.
@@ -542,7 +558,7 @@ class dbDoc:
         log_entries: Dict[str, Any] = {}
 
         # Check if all filters are None
-        all_none = all(var is None for var in [uid, hid, time, date, where, where_data])
+        all_none = all(var is None for var in [uid, idx, time, date, where, where_data])
         if not apply_filter:
             all_none = True
 
@@ -551,41 +567,47 @@ class dbDoc:
             log_entries = self._retrive_doc_all(docfile)
             return log_entries
 
-        # If `hid` is provided, retrieve entries by unique ID
+        # If `idx` is provided, retrieve entries by unique ID
         where = where or {}
-        hid = hid or where.get(hid)
-        if hid is not None:
-            hids_list = strorlist_to_list(hid)
-            return self.pull_hid(hids_list, docfile, where_data)
+        idx = idx or where.get(idx)
+        if idx is not None:
+            idxs_list = strorlist_to_list(idx)
+            return self.pull_idx(idxs_list, docfile, where_data)
 
-        # If any other filter criteria are provided, search for matching hIDs and retrieve the corresponding entries
+        # If any other filter criteria are provided, search for matching idxs and retrieve the corresponding entries
         if any([uid, time, date, where, where_data]):
-            hids_list = self.search_hid(
-                uid, time, date, where, where_data, search_all_filter
+            idxs_list = self.search_idx(
+                hid=kwargs.get("hid", None),
+                uid=uid,
+                time=time,
+                date=date,
+                where=where,
+                where_data=where_data,
+                search_all_filter=search_all_filter,
             )
-            log_entries = self.pull_hid(
-                hids=hids_list, docfile=docfile, where_data=where_data
+            log_entries = self.pull_idx(
+                idxs=idxs_list, docfile=docfile, where_data=where_data
             )
             return log_entries
 
         return log_entries
 
-    def pull_hid(
+    def pull_idx(
         self,
-        hids: List[str],
+        idxs: idxdata,
         docfile: str,
         where_data: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        Retrieves log entries based on a list of unique IDs (`hids`) from a specified document file (`docfile`).
+        Retrieves log entries based on a list of unique IDs (`idxs`) from a specified document file (`docfile`).
 
         Args:
-            hids (List[str]): A list of unique IDs representing the log entries to retrieve.
+            idxs (List[str]): A list of unique IDs representing the log entries to retrieve.
             docfile (str): The specific subfile within the document to search. Must be one of ["data.oxd", "vec.oxd", ".index"].
             where_data (Optional[Dict[str, Any]], optional): Data filter criteria for the log entry, particularly used for searching within "data.oxd". Defaults to None.
 
         Returns:
-            Dict[str, Any]: A dictionary containing the log entries that match the given `hids`.
+            Dict[str, Any]: A dictionary containing the log entries that match the given `idxs`.
 
         Raises:
             ValueError: If `docfile` is not a valid subfile within the document.
@@ -600,29 +622,37 @@ class dbDoc:
             )
 
         # Determine which content to search based on `docfile`
-        if docfile == ".index":
-            content = self.doc_index
-        elif docfile == "data.oxd" and where_data:
+
+        if docfile == "data.oxd" and where_data:
             search_string = where_data.get("search_string")
             if not search_string:
                 return log_entries
             content = self.data_oxd
 
-            # Search within the data using the provided `hids` and `search_string`
-            for hidx in hids:
-                unit = content.get(hidx)
+            # Search within the data using the provided `idxs` and `search_string`
+            for idx in idxs:
+                idx = str(idx)
+                unit = content.get(idx)
                 if unit:
-                    if search_string in unit["data"]:
-                        log_entries[hidx] = unit
+                    if search_string in unit:
+                        log_entries[idx] = unit
             return log_entries
         else:
-            content = self.vec_oxd if docfile == "vec.oxd" else self.data_oxd
+            if docfile == "vec.oxd":
+                content = self.vec_oxd
 
-        # Retrieve log entries using the provided `hids`
-        for hidx in hids:
-            unit = content.get(hidx)
+            elif docfile == ".index":
+                content = self.index_oxd
+
+            else:
+                content = self.data_oxd
+
+        # Retrieve log entries using the provided `idxs`
+        for idx in idxs:
+            idx = str(idx)
+            unit = content.get(idx)
             if unit:
-                log_entries[hidx] = unit
+                log_entries[idx] = unit
 
         return log_entries
 
@@ -630,8 +660,8 @@ class dbDoc:
         self,
         query: str,
         topn: int = 10,
-        by: Optional[str] = "dp",
-        hid: Optional[hids] = None,
+        by: Optional[str] = settings.SIM_FORMAT,
+        idx: idxdata = None,
         uid: Optional[str] = None,
         time: Optional[str] = None,
         date: Optional[str] = None,
@@ -652,13 +682,13 @@ class dbDoc:
                 - "dp": Dot Product (default)
                 - "ed": Euclidean Distance
                 - "cs": Cosine Similarity
-            hid (Optional[hids], optional): The unique ID(s) of the log entry. Defaults to None.
+            idx (Optional[idxs], optional): The unique ID(s) of the log entry. Defaults to None.
             uid (Optional[str], optional): The uid of the log entry. Defaults to None.
             time (Optional[str], optional): The time of the log entry. Defaults to None.
             date (Optional[str], optional): The date of the log entry. Defaults to None.
             where (Optional[Dict[str, Any]], optional): Additional metadata filter criteria for the log entry. Defaults to None.
             where_data (Optional[Dict[str, Any]], optional): Data filter criteria, such as a specific search string within the log entries. Defaults to None.
-            includes (Optional[List[str]], optional): Fields to include in the search results. Defaults to ["hid", "data", "description"].
+            includes (Optional[List[str]], optional): Fields to include in the search results. Defaults to ["idx", "data", "description"].
             search_all_filter (Optional[bool], optional): Whether to apply all filters across all entries. Defaults to False.
             apply_filter_last (Optional[bool], optional): Whether to apply filters after VectorModel search. Defaults to False.
             where_data_before_vec_search (Optional[bool], optional): Whether to apply `where_data` filter before performing VectorModel search. Defaults to False.
@@ -671,17 +701,17 @@ class dbDoc:
         """
         # Initialize the includes list if it's None
         if includes is None:
-            includes = ["hid", "data", "description"]
+            includes = ["idx", "data", "metadata"]
 
         # Validate the search method
-        if by not in SIM_FORMAT:
+        if by not in settings.SIM_FORMATS:
             raise ValueError(
-                f"Invalid search method '{by}'. Must be one of {SIM_FORMAT}."
+                f"Invalid search method '{by}'. Must be one of {settings.SIM_FORMATS}."
             )
 
         # Prepare the search query for pulling entries
         search_query = {
-            "hid": hid,
+            "idx": idx,
             "uid": uid,
             "time": time,
             "date": date,
@@ -698,16 +728,15 @@ class dbDoc:
 
         # Pull Vec log entries for the search
         vec_log_entries = self.pull(**search_query)
-        dataset_hids = list(vec_log_entries.keys())
+        dataset_idxs = list(vec_log_entries.keys())
         dataset = list(vec_log_entries.values())
 
         # Perform the search on the Vec data
         search_scores = self.vec.search(query, embeds=dataset, by=by)
         search_res = {
             "entries": 0,
-            "hid": [],
+            "idx": [],
             "data": [],
-            "description": [],
             "sim_score": [],
             "index": [],
             "embeddings": [],
@@ -717,78 +746,78 @@ class dbDoc:
         if len(search_scores["idx"]) == 0:
             return search_res
 
-        # Retrieve the top matching hIDs
-        top_hids = [dataset_hids[idx] for idx in search_scores["idx"][:topn]]
+        # Retrieve the top matching embds
+        top_idxs = [dataset_idxs[idx] for idx in search_scores["idx"][:topn]]
 
         # Apply additional filters if specified
         if apply_filter_last:
-            search_query["hid"] = top_hids
+            search_query["idx"] = top_idxs
             search_query["apply_filter"] = True
             search_query["docfile"] = "data.oxd"
             search_query["where_data"] = where_data
             res_data = self.pull(**search_query)
         else:
-            res_data = self.pull_hid(
-                hids=top_hids, docfile="data.oxd", where_data=where_data
+            res_data = self.pull_idx(
+                idxs=top_idxs, docfile="data.oxd", where_data=where_data
             )
 
-        res_hids = list(res_data.keys())
-        res_len = len(res_hids)
+        res_idxs = list(res_data.keys())
+        res_len = len(res_idxs)
         search_res["entries"] = res_len
-        search_res["hid"] = res_hids
+        search_res["idx"] = res_idxs
 
         # Populate the search results with data, descriptions, and other requested fields
-        for hidx in res_hids:
-            search_res["data"].append(res_data[hidx]["data"])
-            search_res["description"].append(res_data[hidx]["description"])
+        for idxi in res_idxs:
+            search_res["data"].append(res_data[idxi])
             search_res["sim_score"].append(
                 search_scores["sim_score"][
-                    search_scores["idx"].index(dataset_hids.index(hidx))
+                    search_scores["idx"].index(dataset_idxs.index(idxi))
                 ]
             )
-            search_res["index"].append(self.doc_index.get(hidx))
+            search_res["index"].append(self.index_oxd.get(idxi))
             if "embeddings" in includes:
-                search_res["embeddings"].append(vec_log_entries[hidx])
+                search_res["embeddings"].append(vec_log_entries[idxi])
 
         return search_res
 
     def delete(
         self,
-        hid: Optional[Union[str, list[str]]] = None,
+        idx: Optional[Union[str, list[str]]] = None,
     ) -> list[str]:
         """
-        delete data of the given hids
+        delete data of the given idxs
 
         Args:
-            hid (Optional[Union[str, List[str]]], optional): hid or list of hids that need to be deleted
+            idx (Optional[Union[str, List[str]]], optional): idx or list of idxs that need to be deleted
 
         Returns:
             list[str]: given input that got deleted
 
         Raises:
-            ValueError: If `hid` is None
+            ValueError: If `idx` is None
         """
 
-        # Validation to ensure only one of `hid` or `doc` is provided and neither is empty.
-        if hid is None:
-            raise ValueError("Either `hid` or `doc` must be provided, but not both.")
+        # Validation to ensure only one of `idx` or `doc` is provided and neither is empty.
+        if idx is None:
+            raise ValueError("Either `idx` or `doc` must be provided, but not both.")
 
         # Ensure all inputs are lists to facilitate batch processing
 
-        hid_list = hid if isinstance(hid, list) else [hid]
-        self.data_oxd.delete(hid_list)
-        self.vec_oxd.delete(hid_list)
-        for h in hid_list:
-            self.del_index(h)
+        idx_list = idx if isinstance(idx, list) else [idx]
+        idx_list = [str(i) for i in idx_list]
+        self.index_oxd.delete(idx_list)
+        self.data_oxd.delete(idx_list)
+        self.vec_oxd.delete(idx_list)
+        self.uidx.delete(idx_list)
 
-        self.save_index()
+        self.save_doc()
 
-        return hid_list
+        return idx_list
 
     def show(
         self,
         uid: Optional[str] = None,
-        hid: Optional[str] = None,
+        idx: Optional[str] = None,
         time: Optional[str] = None,
         doc: Optional[str] = None,
         date: Optional[str] = None,
@@ -798,7 +827,7 @@ class dbDoc:
 
         Args:
             uid (Optional[str], optional): The uid of the log entry. Defaults to None.
-            hid (Optional[str], optional): The unique ID of the log entry. Defaults to None.
+            idx (Optional[str], optional): The unique ID of the log entry. Defaults to None.
             time (Optional[str], optional): The time of the log entry. Defaults to None.
             doc (Optional[str], optional): The document name to retrieve from. Defaults to None.
             date (Optional[str], optional): The date of the log entry. Defaults to None.
@@ -813,88 +842,6 @@ class dbDoc:
             doc (str): The document name to process.
         """
         pass  # Implementation will be added in the future
-
-    def load_index(self) -> Dict[str, Any]:
-        """
-        Loads data from the index file, which may be in BSON or JSON format.
-
-        Returns:
-            Dict[str, Any]: The loaded index data.
-
-        Raises:
-            FileNotFoundError: If the index file does not exist, a new index will be initialized and saved.
-        """
-        try:
-            with open(self.doc_index_path, "rb+") as file:
-                file_content = file.read()
-                if file_content:
-                    content = dbin.decode(file_content)
-                else:
-                    content = {}
-                self.doc_reg = content.get("doc_reg", {"entry": 0})
-                self.doc_index = content.get("index", {})
-                return content
-
-        except FileNotFoundError:
-            content = {"doc_reg": {"entry": 0}, "index": {}}
-            self.doc_reg = content["doc_reg"]
-            self.doc_index = content["index"]
-            self.save_index()
-            return content
-
-    def save_index(self) -> None:
-        """
-        Saves the current state of the index to the index file in BSON format.
-        """
-        log_file_path = self.doc_index_path
-        content = {"doc_reg": self.doc_reg, "index": self.doc_index}
-
-        def write_file(file, content) -> None:
-            file.seek(0)
-            file.truncate()
-            file.write(dbin.encode(content))
-
-        try:
-            mode = "rb+"
-            with open(log_file_path, mode) as file:
-                write_file(file, content)
-        except FileNotFoundError:
-            mode = "wb"
-            with open(log_file_path, mode) as file:
-                write_file(file, content)
-
-    def push_index(self, hid: str, index_unit: Any) -> None:
-        """
-        Pushes an index entry to the index file.
-
-        Args:
-            hid (str): The unique ID for the log entry.
-            index_unit (Any): The index data to be logged.
-
-        Raises:
-            ValueError: If `index_unit` is empty or None.
-        """
-        if not index_unit:
-            raise ValueError("ox-db: No data provided for logging")
-        self.doc_index[hid] = index_unit
-        self.doc_reg["entry"] += 1
-        # self.save_index()
-
-    def del_index(self, hid: str) -> bool:
-        """
-        delete an index entry to the index file.
-
-        Args:
-            hid (str): The unique ID for the log entry.
-
-        Raises:
-            ValueError: If `his` is empty or None.
-        """
-        if not hid:
-            raise ValueError("ox-db: No hid provided for deletion")
-        del self.doc_index[hid]
-        self.doc_reg["entry"] -= 1
-        # self.save_index()
 
     def _retrive_doc_all(self, docfile: str) -> Dict[str, Any]:
         """
@@ -911,7 +858,7 @@ class dbDoc:
         """
         content = {}
         if docfile == ".index":
-            content = self.doc_index
+            content = self.index_oxd.load_data()
         elif docfile == "vec.oxd":
             content = self.vec_oxd.load_data()
         elif docfile == "data.oxd":
@@ -922,18 +869,18 @@ class dbDoc:
             )
         return content
 
-    def search_hid(
+    def search_idx(
         self,
+        hid: Optional[str] = None,
         uid: Optional[str] = None,
         time: Optional[str] = None,
         date: Optional[str] = None,
         where: Optional[Dict[str, Any]] = None,
         where_data: Optional[Dict[str, Any]] = None,
         search_all_filter: bool = False,
-        **kwargs,
     ) -> List[str]:
         """
-        Searches for hIDs based on uid, time, date, or additional filtering criteria.
+        Searches for IDXs based on uid, time, date, or additional filtering criteria.
 
         Args:
             uid (Optional[str], optional): The uid to search. Defaults to None.
@@ -944,51 +891,59 @@ class dbDoc:
             search_all_filter (bool, optional): If True, requires all filters to match. Defaults to False.
 
         Returns:
-            List[str]: The list of matching hIDs.
+            List[str]: The list of matching IDXs.
         """
         where = where or {}
 
         iskey = uid or where.get("uid")
+        ishid = hid or where.get("hid")
         istime = time or where.get("time")
         isdate = date or where.get("date")
 
         if iskey:
             where["uid"] = iskey
+        if ishid:
+            where["hid"] = ishid
         if istime:
             where["time"] = istime
         if isdate:
             where["date"] = isdate
 
-        content = self.doc_index
-        hids = []
+        idxs = []
 
-        for hid, index_metadata in content.items():
-            log_it = self._metadata_filter(where, index_metadata, search_all_filter)
+        for idx in self.data_oxd.keys():
+            idx = str(idx)
+            log_it = self._metadata_filter(
+                where, self.index_oxd.get(idx), search_all_filter
+            )
             if log_it:
-                hids.append(hid)
+                idxs.append(idx)
 
-        return hids
+        return idxs
 
     @staticmethod
     def search_data(
-        search_string: str, doc_data_dict: Dict[str, Dict[str, str]]
+        search_string: str, doc_data: Oxdld, output: str = "data"
     ) -> List[str]:
         """
         Searches through the document data for a specific string.
 
         Args:
             search_string (str): The string to search for within the data.
-            doc_data_dict (Dict[str, Dict[str, str]]): The dictionary containing hIDs and their corresponding data.
-
+            doc_data (Dict[str, Dict[str, str]]): The dictionary containing IDXs and their corresponding data.
+            output (str): out put list [idx,values]
         Returns:
-            List[str]: The hIDs where the search string was found.
+            List[str]: The IDXs where the search string was found.
         """
-        hids = []
-        for hid, doc_data in doc_data_dict.items():
-            if search_string in doc_data.get("data", ""):
-                hids.append(hid)
-
-        return hids
+        out = []
+        for idx in doc_data.keys():
+            data = doc_data.get(idx, "")
+            if search_string in data:
+                if output == "data":
+                    out.append(data)
+                else:
+                    out.append(idx)
+        return out
 
     @staticmethod
     def _metadata_filter(
@@ -1014,7 +969,6 @@ class dbDoc:
             for metakey in query_dict.keys():
                 qvalue = query_dict.get(metakey)
                 dvalue = data_dict.get(metakey)
-
                 if dvalue is None:
                     return False
                 elif (metakey in partial_filters) and (qvalue in dvalue):
