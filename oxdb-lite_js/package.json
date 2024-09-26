@@ -1,0 +1,21 @@
+{
+  "name": "ox-db",
+  "version": "1.0.0",
+  "description": "javascript binding for ox-db",
+  "main": "index.js",
+
+
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ox-ai/ox-db.js.git"
+  },
+  "keywords": [
+    "ox-ai"
+  ],
+  "author": "Lokeshwaran-M",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ox-ai/ox-db.js/issues"
+  },
+  "homepage": "https://github.com/ox-ai/ox-db.js#readme"
+}

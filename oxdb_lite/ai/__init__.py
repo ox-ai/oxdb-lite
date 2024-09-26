@@ -1,0 +1,1 @@
+from oxdb_lite.ai.embed import VectorModel

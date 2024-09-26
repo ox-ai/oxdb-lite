@@ -4,5 +4,4 @@ pydantic
 requests
 setuptools
 uvicorn
-ox-doc @ git+https://github.com/ox-ai/ox-doc.git#egg=ox-doc
-ox-onnx @ git+https://github.com/ox-ai/ox-onnx.git#egg=ox-onnxa
+ox-onnx @ git+https://github.com/ox-ai/ox-onnx.git#egg=ox-onnx

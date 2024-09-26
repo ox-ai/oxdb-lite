@@ -1,11 +1,10 @@
 fastapi==0.112.1
 numpy==2.1.0
 pydantic==2.8.2
-pymongo==4.8.0
 Requests==2.32.3
 setuptools>=72.2.0
 uvicorn==0.30.6
-ox-doc @ git+https://github.com/ox-ai/ox-doc.git#egg=ox-doc
+sortedcontainers
 ox-onnx @ git+https://github.com/ox-ai/ox-onnx.git#egg=ox-onnx
 
 

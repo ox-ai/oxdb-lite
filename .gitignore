@@ -181,3 +181,18 @@ build/
 
 ignore.*
 *.ignore
+
+
+
+# .oxd file
+*.oxdb/
+*.oxd/
+*.oxd.zip
+*.oxd.json
+
+*.oxdld/
+*.oxdld.zip
+*.oxdld.json
+
+
+*.ignore
