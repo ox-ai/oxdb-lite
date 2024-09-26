@@ -24,7 +24,7 @@ dependencies = [
 "setuptools",
 "uvicorn",
 "sortedcontainers",
-"ox-onnx @ git+https://github.com/ox-ai/ox-onnx.git#egg=ox-onnxa",
+"ox-onnx @ git+https://github.com/ox-ai/ox-onnx.git#egg=ox-onnx",
 ]
 
 [project.scripts]
