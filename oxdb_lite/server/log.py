@@ -36,7 +36,7 @@ app.add_middleware(
 
 # Global variable to store the API key
 
-API_KEY = os.getenv("OXDB_API_KEY") or "ox-db-prime"
+API_KEY = os.getenv("OXDB_API_KEY") or "oxdb_lite-prime"
 
 db = Oxdb("hosted")
 oxdb_shell = OxdbShell(db)
@@ -120,7 +120,7 @@ def source_app():
 
 
 def run(
-    app_source="oxdb.server.log:app",
+    app_source="oxdb_lite.server.log:app",
     apikey=None,
     reload=False,
     host=None,
@@ -135,7 +135,7 @@ def run(
         host = "127.0.0.1"  # defaults to local host
 
     # Set the API key from the command-line argument
-    os.environ["OXDB_API_KEY"] = apikey or os.getenv("OXDB_API_KEY") or "ox-db-prime"
+    os.environ["OXDB_API_KEY"] = apikey or os.getenv("OXDB_API_KEY") or "oxdb_lite-prime"
     global API_KEY
     API_KEY = os.getenv("OXDB_API_KEY")
 
@@ -146,13 +146,14 @@ def run(
     except (Exception,KeyboardInterrupt, EOFError) as e:
  
         print("\nExiting server.....")
+        print("reason : ",e)
         print("Initiating Clean Up")
         db.clean_up()
         print("Clean Up Compelete")
    
 
 
-def main(app_source="oxdb.server.log:app"):
+def main(app_source="oxdb_lite.server.log:app"):
     parser = argparse.ArgumentParser(description="Run the OxDB FastAPI server.")
     parser.add_argument(
         "--host", nargs="?", const=True, default=None, help="Host address"

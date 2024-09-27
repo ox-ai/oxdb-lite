@@ -5,8 +5,8 @@ inheritance of the dict to implement additional features
 
 import os
 from typing import Any
-from oxdb_lite.oxdoc_lite.dp import DBIN_METHODS, DBin
-from oxdb_lite.oxdoc_lite.utils import doc_validator
+from oxdb_lite.oxdoc.dp import DBIN_METHODS, DBin
+from oxdb_lite.oxdoc.utils import doc_validator
 
 
 class OxdMem(dict):

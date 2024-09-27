@@ -8,25 +8,6 @@ When storing and retrieving data, serialization into files is often required. Th
 
 **oxdoc** addresses these inefficiencies by providing a library capable of handling read, write, update, and delete operations on different data structures. It optimizes serialization through various techniques tailored for different data structures, ensuring efficient processing of large datasets.
 
-## Installation:
-
-always build from source for latest and bug free version
-
-### build from source :
-
-```
-pip install git+https://github.com/ox-ai/ox-doc.git
-```
-
-### from pip
-
-```
-pip install ox-doc
-```
-
-## docs :
-
-- [docs.md](./docs/docs.md) will be released after major release
 
 ## Features :
 
@@ -48,7 +29,7 @@ value.type  = any , [str,list,set,dict]
 ### code snippet :
 
 ```py
-from oxdoc.db import Oxdld
+from oxdb_lite.oxdoc.db import Oxdld
 
 doc = Oxdld('data')             # initialize key-value db file prisisted
 
@@ -165,7 +146,7 @@ Load data operation (load entire data)  total size : 2gb took 36.300187 seconds
 ```tree
 .
 ├── __init__.py
-├── data_process.py
+├── dp.py
 └── db
     ├── __init__.py
     └── ld.py

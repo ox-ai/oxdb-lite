@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 from typing import Dict, ForwardRef, Union, List, Optional, Any
 
-from oxdb_lite.oxdoc_lite.db import Oxdld
+from oxdb_lite.oxdoc.db import Oxdld
 
 
 from oxdb_lite.core.types import idxdata, embd, DOCFILE_LIST

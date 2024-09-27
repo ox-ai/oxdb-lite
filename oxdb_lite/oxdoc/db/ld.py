@@ -9,11 +9,11 @@ import os
 from typing import Any, Union
 import zipfile
 
-from oxdb_lite.oxdoc_lite.dp import DBIN_METHODS, DBin
-from oxdb_lite.oxdoc_lite.db.cache import LRUCache
-from oxdb_lite.oxdoc_lite.db.mem import OxdMem
-from oxdb_lite.oxdoc_lite.db.freeindex import FreeIndex
-from oxdb_lite.oxdoc_lite.utils import doc_validator
+from oxdb_lite.oxdoc.dp import DBIN_METHODS, DBin
+from oxdb_lite.oxdoc.db.cache import LRUCache
+from oxdb_lite.oxdoc.db.mem import OxdMem
+from oxdb_lite.oxdoc.db.freeindex import FreeIndex
+from oxdb_lite.oxdoc.utils import doc_validator
 
 
 

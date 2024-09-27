@@ -1,7 +1,7 @@
 import json
 from typing import Any, Union, List, Dict
 
-from oxdb_lite.oxdoc_lite.oxdbin import Oxdbin
+from oxdb_lite.oxdoc.oxdbin import Oxdbin
 
 DBIN_METHODS = [ "json", "oxdbin"]
 
